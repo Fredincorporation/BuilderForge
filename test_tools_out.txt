@@ -1,0 +1,8 @@
+Traceback (most recent call last):
+  File "C:\Users\fred\Documents\GitHub\BuilderForge\test_tools_direct.py", line 13, in <module>
+    log("=== Testing tools directly ===")
+    ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\fred\Documents\GitHub\BuilderForge\test_tools_direct.py", line 9, in log
+    with open(OUT, "a") as f:
+         ~~~~^^^^^^^^^^
+PermissionError: [Errno 13] Permission denied: 'test_tools_out.txt'
