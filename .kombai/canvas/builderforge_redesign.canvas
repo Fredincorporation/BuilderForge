@@ -60,7 +60,7 @@
       "created": "2026-07-16T12:51:30.075937+00:00",
       "modified": "2026-07-16T12:51:55.808359+00:00",
       "id": "var_bc304d50e66f",
-      "viewportScrollY": 1
+      "viewportScrollY": 0
     },
     "var_505a05af86af": {
       "type": "variant",
@@ -77,7 +77,8 @@
       "comments": [],
       "created": "2026-07-16T12:51:30.407049+00:00",
       "modified": "2026-07-16T12:51:56.786050+00:00",
-      "id": "var_505a05af86af"
+      "id": "var_505a05af86af",
+      "viewportScrollY": 100
     }
   },
   "comments": [],

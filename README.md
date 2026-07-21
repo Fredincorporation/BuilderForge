@@ -12,20 +12,57 @@
 
 ## 🏗️ Overview
 
-**BuilderForge** is a multi-agent **Agentic Service Provider (ASP)** combining:
-- **DealFlow** — Opportunity discovery, market research, grant finding, competitor analysis
-- **LaunchPad Ally** — Idea-to-execution pipeline with content generation, smart contracts, and deployment simulation
+**BuilderForge** is a modern **Agentic Service Provider (ASP)** with a **React frontend** and **Python FastAPI backend**:
+- **Frontend**: React + TanStack Start (Vite) with Tailwind CSS & Radix UI
+- **Backend**: FastAPI + CrewAI with 5 specialized agents
+- **Features**: DealFlow (market research), LaunchPad (idea-to-execution), OKX integration
 
-5 specialized AI agents work together in a CrewAI pipeline to take a user from initial idea through research, creation, on-chain simulation, and analysis — complete with export and OKX.AI ASP listing.
+5 specialized AI agents work together in a CrewAI pipeline to take a user from initial idea through research, creation, on-chain simulation, and analysis — exposed via a REST API.
 
-### ✨ Demo
-[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](http://localhost:8501)
+### ✨ Live Deployment
+- **Frontend**: http://localhost:3000 (or https://yourdomain.com)
+- **Backend API**: http://localhost:8000 (or https://api.yourdomain.com)
+- **API Docs**: http://localhost:8000/docs (Swagger UI)
 
 **Runs in simulated mode with zero API keys** — perfect for hackathon judging.
 
 ---
 
 ## 🧠 Architecture
+
+### System Diagram
+
+```
+┌─────────────────────────────────────────┐
+│  FRONTEND (React/TanStack Start)        │
+│  ├── Dashboard (projects)               │
+│  ├── New Project Form                   │
+│  ├── DealFlow (opportunities)           │
+│  ├── LaunchPad (launches)               │
+│  └── Wallet (simulation)                │
+│                                         │
+│  API Client: src/lib/api.ts             │
+│  Hooks: src/hooks/useApi.ts             │
+│  (React Query for state management)     │
+└──────────────────┬──────────────────────┘
+                   │
+        REST API (JSON/HTTP)
+                   │
+┌──────────────────▼──────────────────────┐
+│  BACKEND (FastAPI/Python)               │
+│  ├── /api/projects (CRUD)               │
+│  ├── /api/crew (CrewAI execution)       │
+│  ├── /api/wallet (OKX simulation)       │
+│  ├── /api/dealflow (opportunities)      │
+│  └── /api/launchpad (launches)          │
+│                                         │
+│  Crew: crew/builderforge_crew.py        │
+│  Agents: agents/*.py (5 specialized)    │
+│  Tools: tools/*.py (research, content)  │
+│  Memory: utils/memory.py (agent context)│
+│  Models: utils/models.py (Pydantic)     │
+└─────────────────────────────────────────┘
+```
 
 ### Multi-Agent System
 
@@ -40,7 +77,7 @@
         ▼                         ▼                         ▼
 ┌─────────────────┐    ┌──────────────────┐     ┌─────────────────┐
 │   Researcher    │    │     Creator      │     │    Executor     │
-│ • Market research│    │ • Tokenomics     │     │ • OKX wallet    │
+│ • Market search │    │ • Tokenomics     │     │ • OKX wallet    │
 │ • Competitors   │    │ • Pitch deck     │     │ • Deploy sim    │
 │ • Grants        │    │ • Social copy    │     │ • Gas estimates │
 │ • Audiences     │    │ • Contract code  │     │ • Tx sequences  │
@@ -66,14 +103,18 @@ Idea Input → Research Phase → Creation Phase → Execution Phase → Analysi
 
 | Component | Technology | Purpose |
 |-----------|-----------|---------|
-| **Agent Framework** | CrewAI 0.61.x | Multi-agent orchestration |
-| **AI Tools** | LangChain 0.2.x | Tool framework for agents |
-| **LLM** | Anthropic Claude (Claude Sonnet 4) | Primary reasoning engine |
-| **UI** | Streamlit 1.36.x | Dashboard and user interface |
-| **Blockchain** | Custom viem-style simulation | OKC testnet tx simulation |
-| **ASP Integration** | Custom OKX API stubs | OKX.AI marketplace listing |
-| **Auth/Data** | Supabase (optional) | User auth + project persistence |
-| **Styling** | Custom CSS | Cartoon brutalist design |
+| **Frontend** | React + TanStack Start (Vite) | Modern SSR-capable React framework |
+| **Styling** | Tailwind CSS + Radix UI | Component library + utility-first CSS |
+| **State** | React Query (TanStack Query) | Server state management & caching |
+| **Routing** | TanStack Router | File-based routing |
+| **Backend API** | FastAPI | Async Python web framework |
+| **Agent Framework** | CrewAI 1.15+ | Multi-agent orchestration |
+| **AI Tools** | LangChain 0.3+ | Tool framework for agents |
+| **LLM** | Anthropic Claude / OpenAI | Primary reasoning engines |
+| **Async** | asyncio + ThreadPoolExecutor | Background job execution |
+| **Blockchain** | Custom simulation | OKC testnet tx simulation |
+| **Database** | Supabase (optional) | Project persistence |
+| **Deployment** | Docker + nginx | Production containerization |
 
 ---
 
@@ -82,54 +123,73 @@ Idea Input → Research Phase → Creation Phase → Execution Phase → Analysi
 ```
 BuilderForge/
 │
-├── app.py                          # Main entry point (Streamlit)
-├── requirements.txt                # Python dependencies
-├── .env.example                    # Environment template
-├── README.md                       # This file
+├── frontend/                        # React + TanStack Start (Loveable export)
+│   ├── src/
+│   │   ├── routes/                  # File-based routes (TanStack Router)
+│   │   │   ├── index.tsx            # Home page
+│   │   │   ├── dashboard.tsx        # Projects dashboard
+│   │   │   ├── new-project.tsx      # Create project form
+│   │   │   ├── dealflow.tsx         # Opportunities
+│   │   │   ├── launchpad.tsx        # Launches
+│   │   │   └── __root.tsx           # Root layout
+│   │   ├── components/
+│   │   │   └── ui/                  # Radix UI components
+│   │   ├── hooks/
+│   │   │   └── useApi.ts            # React Query hooks for API calls
+│   │   ├── lib/
+│   │   │   └── api.ts               # Fetch-based API client
+│   │   ├── server.ts                # Server middleware
+│   │   └── styles.css               # Tailwind + custom styles
+│   ├── package.json
+│   ├── tsconfig.json
+│   ├── vite.config.ts
+│   └── .env.example
 │
-├── agents/                         # AI Agent definitions
-│   ├── __init__.py
-│   ├── coordinator.py              # Main orchestrator agent
-│   ├── researcher.py               # Market research agent
-│   ├── creator.py                  # Content generation agent
-│   ├── executor.py                 # On-chain execution agent
-│   └── analyzer.py                 # Metrics & analysis agent
+├── backend/                         # FastAPI Python server
+│   ├── app.py                       # FastAPI entry point
+│   ├── config.py                    # Settings & configuration
+│   ├── api/
+│   │   ├── __init__.py
+│   │   ├── projects.py              # POST/GET /api/projects
+│   │   ├── crew.py                  # POST /api/crew/run
+│   │   ├── wallet.py                # Wallet & simulation endpoints
+│   │   ├── dealflow.py              # GET /api/dealflow
+│   │   └── launchpad.py             # GET /api/launchpad
+│   ├── agents/                      # AI Agent definitions
+│   │   ├── __init__.py
+│   │   ├── coordinator.py           # Main orchestrator
+│   │   ├── researcher.py            # Market research
+│   │   ├── creator.py               # Content generation
+│   │   ├── executor.py              # On-chain execution
+│   │   └── analyzer.py              # Metrics & analysis
+│   ├── crew/
+│   │   ├── __init__.py
+│   │   └── builderforge_crew.py     # Task definitions & crew builder
+│   ├── tools/                       # LangChain tools
+│   │   ├── __init__.py
+│   │   ├── research_tools.py        # Web search, grants
+│   │   ├── content_tools.py         # Tokenomics, contracts
+│   │   ├── blockchain_tools.py      # OKX wallet, deployment
+│   │   └── analytics_tools.py       # Metrics, sentiment
+│   ├── utils/
+│   │   ├── __init__.py
+│   │   ├── state.py                 # Session state
+│   │   ├── models.py                # Pydantic models
+│   │   ├── memory.py                # Agent memory store
+│   │   └── okx_integration.py       # OKX integration
+│   ├── config/
+│   │   ├── __init__.py
+│   │   └── settings.py              # Environment settings
+│   ├── requirements.txt             # Python dependencies
+│   ├── .env.example
+│   ├── run.sh                       # Linux/Mac startup script
+│   └── run.bat                      # Windows startup script
 │
-├── crew/                           # CrewAI pipeline
-│   ├── __init__.py
-│   └── builderforge_crew.py        # Task definitions & crew builder
-│
-├── tools/                          # LangChain tool definitions
-│   ├── __init__.py
-│   ├── research_tools.py           # Web search, grants, competitors
-│   ├── content_tools.py            # Tokenomics, contracts, copy
-│   ├── blockchain_tools.py         # OKX wallet, deploy, mint
-│   └── analytics_tools.py          # Metrics, sentiment, traction
-│
-├── ui/                             # Streamlit UI components
-│   ├── __init__.py
-│   ├── styles.py                   # Brutalist CSS theme
-│   └── components.py               # Reusable UI widgets
-│
-├── utils/                          # Shared utilities
-│   ├── __init__.py
-│   ├── state.py                    # Session state management
-│   ├── supabase_client.py          # Supabase integration (optional)
-│   └── okx_integration.py          # OKX wallet + ASP integration
-│
-├── pages/                          # Streamlit multi-pages
-│   ├── __init__.py
-│   ├── 1_New_Project.py            # Idea input & pipeline trigger
-│   ├── 2_Dashboard.py              # Full results dashboard
-│   ├── 3_DealFlow.py               # Opportunity discovery deep-dive
-│   ├── 4_LaunchPad.py              # Content & deployment tools
-│   └── 5_OKX_ASP_Listing.py        # ASP manifest & submission
-│
-├── assets/
-│   └── builderforge_logo.svg       # App logo
-│
-└── data/                           # Runtime data (gitignored)
-    └── .gitkeep
+├── requirements.txt                 # Main dependencies (FastAPI + CrewAI)
+├── .env.example                     # Environment template
+├── README.md                        # This file
+├── LICENSE
+└── docker-compose.yml               # (Optional) Container setup
 ```
 
 ---
@@ -137,66 +197,117 @@ BuilderForge/
 ## 🚀 Quick Start
 
 ### Prerequisites
-- Python 3.10+
-- pip or uv package manager
+- **Node.js 18+** (for frontend)
+- **Python 3.10+** (for backend)
+- **npm or bun** (frontend package manager)
+- **pip** (Python package manager)
 
-### 1. Clone & Install
+### 1. Clone & Setup
 
 ```bash
 git clone https://github.com/Fredincorporation/BuilderForge.git
 cd BuilderForge
 
-# Create virtual environment
+# Create Python virtual environment for backend
 python -m venv .venv
 source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 
-# Install dependencies
+# Install Python dependencies
 pip install -r requirements.txt
 ```
 
-### 2. Environment Setup (Optional)
+### 2. Environment Setup
 
+**Backend** (`.env` in root):
 ```bash
 cp .env.example .env
-# Edit .env with your keys if using real LLM mode
-# For demo/simulated mode, leave as-is
+# Edit with your API keys (optional for simulated mode)
+# ANTHROPIC_API_KEY=
+# OPENAI_API_KEY=
 ```
 
-### 3. Run the App
+**Frontend** (`frontend/.env`):
+```bash
+cd frontend
+cp .env.example .env
+# Default: REACT_APP_API_URL=http://localhost:8000/api
+cd ..
+```
+
+### 3. Install Frontend Dependencies
 
 ```bash
-streamlit run app.py
+cd frontend
+npm install  # or: bun install
+cd ..
 ```
 
-The app opens at **http://localhost:8501** 🎉
+### 4. Run Both Services
+
+**Terminal 1 — Backend (FastAPI)**:
+```bash
+cd backend
+python -m uvicorn app:app --host 0.0.0.0 --port 8000 --reload
+```
+
+Backend runs at: **http://localhost:8000**  
+API Docs: **http://localhost:8000/docs**
+
+**Terminal 2 — Frontend (React)**:
+```bash
+cd frontend
+npm run dev  # or: bun dev
+```
+
+Frontend runs at: **http://localhost:3000** or **http://localhost:5173**
 
 ---
 
-## 🎮 How to Demo (For Judges)
+## 📡 API Endpoints
 
-### Simulated Mode (No API Keys — 30 Second Demo)
+All endpoints return JSON. Base URL: `http://localhost:8000/api`
 
-| Step | Action | What Judges See |
-|------|--------|-----------------|
-| 1 | Open `http://localhost:8501` | Home page with brutalist design, pipeline overview |
-| 2 | Click **"START A NEW PROJECT"** | Navigate to New Project page |
-| 3 | Enter project title + description + goals | Form with validation |
-| 4 | Ensure **"Use Simulated Mode"** toggle is ON | Badge showing simulated mode |
-| 5 | Click **"LAUNCH BUILDERFORGE"** | ⚡ **The magic happens:** progress bars, agent logs appear in real-time showing each phase |
-| 6 | View results in **Dashboard** | 5 tabs showing Research, Creation, Execution, Analysis |
-| 7 | Navigate to **DealFlow** | Market research, grants, competitors |
-| 8 | Navigate to **LaunchPad** | Tokenomics, smart contract code, deployment simulation |
-| 9 | Navigate to **OKX ASP Listing** | Build manifest, submit, see status dashboard |
-| 10 | **Export** project as JSON from Dashboard | Download button |
+### Projects
+```
+POST   /api/projects                    # Create project
+GET    /api/projects                    # List all projects
+GET    /api/projects/{id}               # Get project by ID
+PATCH  /api/projects/{id}               # Update project
+DELETE /api/projects/{id}               # Delete project
+```
 
-**Total demo time: ~30 seconds** ⚡
+### Crew Execution
+```
+POST   /api/crew/run                    # Start crew workflow (returns task_id)
+GET    /api/crew/{task_id}              # Get execution status
+GET    /api/crew/{task_id}/logs         # Get execution logs
+POST   /api/crew/{task_id}/cancel       # Cancel execution
+```
 
-### Real LLM Mode (With API Key)
+### Wallet & Blockchain
+```
+POST   /api/wallet/connect              # Connect wallet
+GET    /api/wallet                      # Get current wallet
+POST   /api/wallet/disconnect           # Disconnect wallet
+POST   /api/wallet/simulate             # Simulate transaction
+GET    /api/wallet/gas-estimate         # Estimate gas
+```
 
-1. Set `ANTHROPIC_API_KEY` in `.env`
-2. Toggle **"Use Simulated Mode"** OFF on New Project page
-3. Submit project — the real CrewAI pipeline executes
-4. All agents use Claude to generate outputs
+### DealFlow & LaunchPad
+```
+GET    /api/dealflow                    # List opportunities
+GET    /api/dealflow/{id}               # Get opportunity
+GET    /api/launchpad                   # List launches
+GET    /api/launchpad/{id}              # Get launch
+```
+
+### Health
+```
+GET    /health                          # Health check
+GET    /                                # API info
+```
+
+See `backend/app.py` for full documentation and Swagger UI at `/docs`.
 
 ---
 

@@ -9,9 +9,15 @@ langchain-community>=0.3.0
 langchain-anthropic>=0.3.0
 langchain-openai>=0.3.0
 
-# UI Framework
+# FastAPI Backend
+fastapi>=0.104.0
+uvicorn>=0.24.0
+python-multipart>=0.0.9
+
+# UI Framework (Legacy - Streamlit, can be removed)
 streamlit>=1.36.0
 streamlit-extras>=0.4.0
+streamlit-option-menu>=0.4.0
 
 # Data & Auth
 supabase>=2.5.0

@@ -7,13 +7,15 @@ tracks phase transitions, and delegates to specialised agents.
 from __future__ import annotations
 
 import json
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from crewai import Agent
 from langchain_anthropic import ChatAnthropic
 from langchain_openai import ChatOpenAI
 
-from utils.state import ProjectData, add_crew_log
+from config.settings import settings
+from utils.models import ProjectData
+from utils.state import add_crew_log
 
 
 # ---------------------------------------------------------------------------
@@ -21,18 +23,19 @@ from utils.state import ProjectData, add_crew_log
 # ---------------------------------------------------------------------------
 
 def get_llm(temperature: float = 0.3) -> Any:
-    """Get the configured LLM (Anthropic fallback to OpenAI)."""
-    import os
-    if os.getenv("ANTHROPIC_API_KEY"):
+    """Get the configured LLM using environment-backed settings."""
+    if settings.ANTHROPIC_API_KEY:
         return ChatAnthropic(
             model="claude-sonnet-4-20250514",
             temperature=temperature,
             max_tokens=4096,
         )
-    return ChatOpenAI(
-        model="gpt-4o",
-        temperature=temperature,
-    )
+    if settings.OPENAI_API_KEY:
+        return ChatOpenAI(
+            model="gpt-4o",
+            temperature=temperature,
+        )
+    raise RuntimeError("No LLM configured. Set ANTHROPIC_API_KEY or OPENAI_API_KEY.")
 
 
 # ---------------------------------------------------------------------------
@@ -75,6 +78,6 @@ def create_coordinator_agent() -> Agent:
         verbose=True,
         allow_delegation=True,
         llm=get_llm(),
-        max_iter=10,
-        max_rpm=10,
+        max_iter=settings.AGENT_MAX_ITER,
+        max_rpm=settings.AGENT_MAX_RPM,
     )

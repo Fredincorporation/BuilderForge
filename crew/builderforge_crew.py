@@ -13,11 +13,16 @@ from datetime import datetime
 
 from crewai import Crew, Process, Task
 
-from agents.coordinator import create_coordinator_agent, get_llm
+from agents.coordinator import create_coordinator_agent
 from agents.researcher import create_researcher_agent
 from agents.creator import create_creator_agent
 from agents.executor import create_executor_agent
 from agents.analyzer import create_analyzer_agent
+
+from config.settings import settings
+from utils.models import ProjectData
+from utils.memory import MemoryStore
+from utils.langgraph import WorkflowGraph
 
 from tools.research_tools import (
     search_web_for_opportunities,
@@ -46,7 +51,7 @@ from tools.analytics_tools import (
     suggest_next_steps,
 )
 
-from utils.state import ProjectData, ProjectPhase, add_crew_log
+from utils.state import ProjectPhase, add_crew_log
 
 
 # ---------------------------------------------------------------------------
@@ -155,16 +160,69 @@ def create_analysis_tasks():
 
 
 # ---------------------------------------------------------------------------
+# Workflow Graph Helpers
+# ---------------------------------------------------------------------------
+
+def build_agent_workflow_graph() -> WorkflowGraph:
+    graph = WorkflowGraph()
+    graph.add_node(
+        "coordinator",
+        label="Coordinator",
+        agent="Coordinator Agent",
+        description="Top-level orchestration, phase planning, and delegation.",
+    )
+    graph.add_node(
+        "researcher",
+        label="Research",
+        agent="Researcher Agent",
+        description="Market research, grants, and audience discovery.",
+    )
+    graph.add_node(
+        "creator",
+        label="Creation",
+        agent="Creator Agent",
+        description="Tokenomics, pitch materials, content, and contract generation.",
+    )
+    graph.add_node(
+        "executor",
+        label="Execution",
+        agent="Executor Agent",
+        description="Wallet connection, gas estimates, and transaction simulation.",
+    )
+    graph.add_node(
+        "analyzer",
+        label="Analysis",
+        agent="Analyzer Agent",
+        description="Project metrics, sentiment, traction, and next steps.",
+    )
+    graph.add_edge("coordinator", "researcher")
+    graph.add_edge("coordinator", "creator")
+    graph.add_edge("coordinator", "executor")
+    graph.add_edge("coordinator", "analyzer")
+    return graph
+
+
+# ---------------------------------------------------------------------------
 # Crew Builders
 # ---------------------------------------------------------------------------
 
-def build_full_crew(verbose: bool = True) -> Crew:
+def build_full_crew(project: Optional[ProjectData] = None, verbose: bool = True) -> Crew:
     """Build the complete BuilderForge crew with all agents and sequential tasks."""
     coordinator = create_coordinator_agent()
     researcher = create_researcher_agent()
     creator = create_creator_agent()
     executor = create_executor_agent()
     analyzer = create_analyzer_agent()
+
+    # Build the workflow graph for visual debugging and structured planning.
+    workflow_graph = build_agent_workflow_graph()
+    add_crew_log("Workflow graph initialized: " + json.dumps(workflow_graph.to_dict()))
+
+    memory_store = MemoryStore()
+    if project:
+        memory_summary = "\n".join(memory_store.retrieve(project.id, limit=5))
+        if memory_summary:
+            add_crew_log("Loaded recent project memory for agent context.")
 
     research_tasks = create_research_tasks()
     creation_tasks = create_creation_tasks()
@@ -178,7 +236,7 @@ def build_full_crew(verbose: bool = True) -> Crew:
         tasks=all_tasks,
         process=Process.sequential,
         verbose=verbose,
-        max_rpm=10,
+        max_rpm=settings.AGENT_MAX_RPM,
         memory=True,
         cache=True,
         output_log_file="data/crew_output.log",
@@ -228,6 +286,13 @@ def run_simulated_crew(project: ProjectData) -> ProjectData:
     from tools.content_tools import generate_tokenomics
     from tools.blockchain_tools import simulate_transaction_sequence
     from tools.analytics_tools import calculate_project_metrics
+
+    memory_store = MemoryStore()
+    memory_store.remember(
+        project.id,
+        f"Project initialized: {project.title} ({project.category}) - {project.description[:200]}",
+        source="project_init",
+    )
 
     description = project.description or project.title
     add_crew_log("Starting simulated crew execution...")
