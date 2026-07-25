@@ -18,7 +18,7 @@ function getApiBaseUrl(): string {
   return "http://localhost:8000/api";
 }
 
-const API_BASE_URL = getApiBaseUrl();
+export const API_BASE_URL = getApiBaseUrl();
 
 export interface ApiResponse<T = unknown> {
   status: string;
@@ -36,6 +36,11 @@ export interface Project {
   progress: number;
   category?: string;
   created_at?: string;
+  opportunity_report?: any;
+  launch_assets?: any;
+  deployment_plan?: any;
+  metrics_report?: any;
+  logs?: string[];
 }
 
 export interface CrewTask {
@@ -107,9 +112,14 @@ async function apiCall<T = unknown>(
  */
 export const projectsApi = {
   create: (data: { title: string; description: string; category?: string }) =>
-    apiCall<{ project: Project }>("/projects", {
+    apiCall<{ status: string; project: Project }>("/projects", {
       method: "POST",
       body: JSON.stringify(data),
+    }),
+
+  run: (projectId: string) =>
+    apiCall<{ status: string; project_id: string; message: string }>(`/projects/${projectId}/run`, {
+      method: "POST",
     }),
 
   list: () =>
@@ -118,20 +128,27 @@ export const projectsApi = {
     }),
 
   get: (id: string) =>
-    apiCall<{ project: Project }>(`/projects/${id}`, {
+    apiCall<{ status: string; project: Project }>(`/projects/${id}`, {
+      method: "GET",
+    }),
+
+  logs: (id: string) =>
+    apiCall<{ status: string; project_id: string; progress: number; phase: string; logs: string[] }>(`/projects/${id}/logs`, {
       method: "GET",
     }),
 
   update: (id: string, data: Partial<Project>) =>
-    apiCall<{ project: Project }>(`/projects/${id}`, {
+    apiCall<{ status: string; project: Project }>(`/projects/${id}`, {
       method: "PATCH",
       body: JSON.stringify(data),
     }),
 
   delete: (id: string) =>
-    apiCall<{ message: string }>(`/projects/${id}`, {
+    apiCall<{ status: string; message: string }>(`/projects/${id}`, {
       method: "DELETE",
     }),
+
+  getExportUrl: (id: string) => `${API_BASE_URL}/projects/${id}/export`,
 };
 
 /**

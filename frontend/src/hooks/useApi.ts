@@ -2,13 +2,14 @@
  * React hooks for BuilderForge API calls
  */
 
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { 
   projectsApi, 
   crewApi, 
   walletApi, 
   dealflowApi, 
   launchpadApi,
+  aspApi,
   type Project,
   type CrewTask,
   type Deal,
@@ -22,7 +23,7 @@ export const useProjects = () => {
   return useQuery({
     queryKey: ["projects"],
     queryFn: () => projectsApi.list().then(res => res.projects || []),
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 5 * 1000, // 5 seconds
   });
 };
 
@@ -34,7 +35,13 @@ export const useProject = (id: string | undefined) => {
     queryKey: ["project", id],
     queryFn: () => id ? projectsApi.get(id).then(res => res.project) : null,
     enabled: !!id,
-    staleTime: 5 * 60 * 1000,
+    refetchInterval: (query) => {
+      const data = query.state.data as Project | null;
+      if (data && (data.phase === "IN_PROGRESS" || data.progress < 1.0)) {
+        return 1000; // Poll every second while running
+      }
+      return false;
+    },
   });
 };
 
@@ -42,9 +49,39 @@ export const useProject = (id: string | undefined) => {
  * Use create project mutation
  */
 export const useCreateProject = () => {
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (data: { title: string; description: string; category?: string }) =>
       projectsApi.create(data).then(res => res.project),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
+    },
+  });
+};
+
+/**
+ * Use run multi-agent pipeline mutation
+ */
+export const useRunPipeline = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (projectId: string) =>
+      projectsApi.run(projectId),
+    onSuccess: (_, projectId) => {
+      queryClient.invalidateQueries({ queryKey: ["project", projectId] });
+    },
+  });
+};
+
+/**
+ * Use project logs query (with auto polling during pipeline execution)
+ */
+export const useProjectLogs = (projectId: string | undefined, enabled: boolean = true) => {
+  return useQuery({
+    queryKey: ["projectLogs", projectId],
+    queryFn: () => projectId ? projectsApi.logs(projectId) : null,
+    enabled: !!projectId && enabled,
+    refetchInterval: 1000, // Poll every 1 second during run
   });
 };
 
@@ -66,7 +103,7 @@ export const useCrewStatus = (taskId: string | undefined) => {
     queryKey: ["crew", taskId],
     queryFn: () => taskId ? crewApi.status(taskId).then(res => res.task) : null,
     enabled: !!taskId,
-    refetchInterval: 2000, // Poll every 2 seconds
+    refetchInterval: 1500,
   });
 };
 
@@ -77,7 +114,7 @@ export const useWallet = () => {
   return useQuery({
     queryKey: ["wallet"],
     queryFn: () => walletApi.get(),
-    staleTime: 30 * 1000, // 30 seconds
+    staleTime: 30 * 1000,
   });
 };
 
@@ -102,23 +139,31 @@ export const useSimulateTransaction = () => {
 };
 
 /**
- * Use deals query
+ * ASP Manifest queries & mutations
  */
+export const useASPManifest = () => {
+  return useQuery({
+    queryKey: ["aspManifest"],
+    queryFn: () => aspApi.getManifest().then(res => res.manifest),
+  });
+};
+
+export const useValidateManifest = () => {
+  return useMutation({
+    mutationFn: (manifest: any) => aspApi.validate(manifest),
+  });
+};
+
 export const useDeals = (statusFilter?: string) => {
   return useQuery({
     queryKey: ["deals", statusFilter],
     queryFn: () => dealflowApi.list(statusFilter).then(res => res.deals || []),
-    staleTime: 10 * 60 * 1000, // 10 minutes
   });
 };
 
-/**
- * Use launches query
- */
 export const useLaunches = (statusFilter?: string) => {
   return useQuery({
     queryKey: ["launches", statusFilter],
     queryFn: () => launchpadApi.list(statusFilter).then(res => res.launches || []),
-    staleTime: 10 * 60 * 1000, // 10 minutes
   });
 };

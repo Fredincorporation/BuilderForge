@@ -1,7 +1,6 @@
-"""Project Management Endpoints.
+"""Project Management Endpoints for BuilderForge.
 
-Routes for creating, retrieving, updating, deleting, and exporting projects.
-Backed by persistent SQLite storage (utils/db.py).
+Routes for creating, running multi-agent pipelines, retrieving status, reading logs, and exporting ZIP launch packages.
 """
 
 from __future__ import annotations
@@ -10,9 +9,10 @@ import io
 import json
 import zipfile
 import logging
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from uuid import uuid4
 from datetime import datetime
+from concurrent.futures import ThreadPoolExecutor
 
 from fastapi import APIRouter, HTTPException, status
 from fastapi.responses import StreamingResponse
@@ -23,9 +23,65 @@ from utils.db import (
     db_get_project_by_id,
     db_delete_project,
 )
+from agents.coordinator import CoordinatorAgent
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+
+# In-memory log buffer & thread pool for async task execution
+_logs_store: Dict[str, List[str]] = {}
+_executor = ThreadPoolExecutor(max_workers=4)
+
+
+def _run_pipeline_background(project_id: str, title: str, description: str, category: str):
+    """Background task function to execute the 4-phase coordinator pipeline."""
+    try:
+        _logs_store[project_id] = [f"[{datetime.now().isoformat()}] Multi-agent pipeline queued for Project '{title}'"]
+        
+        def log_callback(msg: str, progress: float):
+            formatted = f"[{datetime.now().isoformat()}] {msg}"
+            if project_id not in _logs_store:
+                _logs_store[project_id] = []
+            _logs_store[project_id].append(formatted)
+            
+            # Update project progress in DB
+            proj = db_get_project_by_id(project_id)
+            if proj:
+                proj["progress"] = progress
+                proj["phase"] = "IN_PROGRESS" if progress < 1.0 else "COMPLETE"
+                db_save_project(proj)
+
+        coordinator = CoordinatorAgent(mode="SIMULATED")
+        results = coordinator.execute_pipeline(
+            project_id=project_id,
+            project_title=title,
+            description=description,
+            category=category,
+            log_callback=log_callback
+        )
+        
+        # Save complete result to DB
+        proj = db_get_project_by_id(project_id) or {}
+        proj["opportunity_report"] = results["opportunity_report"]
+        proj["launch_assets"] = results["launch_assets"]
+        proj["deployment_plan"] = results["deployment_plan"]
+        proj["metrics_report"] = results["metrics_report"]
+        proj["phase"] = "COMPLETE"
+        proj["progress"] = 1.0
+        db_save_project(proj)
+        
+        _logs_store[project_id].append(f"[{datetime.now().isoformat()}] Pipeline execution finished successfully!")
+        logger.info(f"Pipeline finished for project {project_id}")
+
+    except Exception as e:
+        logger.error(f"Error in background pipeline for {project_id}: {e}", exc_info=True)
+        if project_id not in _logs_store:
+            _logs_store[project_id] = []
+        _logs_store[project_id].append(f"[{datetime.now().isoformat()}] ERROR: {str(e)}")
+        
+        proj = db_get_project_by_id(project_id) or {}
+        proj["phase"] = "FAILED"
+        db_save_project(proj)
 
 
 @router.post("/projects", status_code=status.HTTP_201_CREATED)
@@ -54,6 +110,7 @@ async def create_project(request: dict) -> dict:
         }
         
         saved = db_save_project(project)
+        _logs_store[project_id] = [f"[{datetime.now().isoformat()}] Project created: {title}"]
         logger.info(f"Created project: {project_id} - {title}")
         
         return {
@@ -61,8 +118,46 @@ async def create_project(request: dict) -> dict:
             "project": saved
         }
     
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error creating project: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
+
+
+@router.post("/projects/{project_id}/run")
+async def run_project_pipeline(project_id: str, request: Optional[dict] = None) -> dict:
+    """Start the multi-agent pipeline (Researcher -> Creator -> Executor -> Analyzer)."""
+    try:
+        project = db_get_project_by_id(project_id)
+        if not project:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Project {project_id} not found"
+            )
+        
+        # Launch background thread
+        _executor.submit(
+            _run_pipeline_background,
+            project_id=project_id,
+            title=project.get("title", ""),
+            description=project.get("description", ""),
+            category=project.get("category", "General")
+        )
+        
+        return {
+            "status": "accepted",
+            "project_id": project_id,
+            "message": f"Multi-agent pipeline started for project {project_id}"
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error starting pipeline for {project_id}: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=str(e)
@@ -89,7 +184,7 @@ async def list_projects() -> dict:
 
 @router.get("/projects/{project_id}")
 async def get_project(project_id: str) -> dict:
-    """Get a specific project by ID."""
+    """Get a specific project by ID with full results & logs."""
     try:
         project = db_get_project_by_id(project_id)
         if not project:
@@ -97,6 +192,9 @@ async def get_project(project_id: str) -> dict:
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Project {project_id} not found"
             )
+        
+        # Attach logs if available
+        project["logs"] = _logs_store.get(project_id, [])
         
         return {
             "status": "success",
@@ -106,6 +204,36 @@ async def get_project(project_id: str) -> dict:
         raise
     except Exception as e:
         logger.error(f"Error fetching project {project_id}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
+
+
+@router.get("/projects/{project_id}/logs")
+async def get_project_logs(project_id: str) -> dict:
+    """Get live agent logs for a running project."""
+    try:
+        project = db_get_project_by_id(project_id)
+        if not project:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Project {project_id} not found"
+            )
+        
+        logs = _logs_store.get(project_id, [])
+        return {
+            "status": "success",
+            "project_id": project_id,
+            "progress": project.get("progress", 0.0),
+            "phase": project.get("phase", "IDEA_INPUT"),
+            "log_count": len(logs),
+            "logs": logs
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error fetching logs for {project_id}: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=str(e)
@@ -133,8 +261,6 @@ async def update_project(project_id: str, request: dict) -> dict:
             project["progress"] = min(1.0, max(0.0, float(request["progress"])))
         
         saved = db_save_project(project)
-        logger.info(f"Updated project: {project_id}")
-        
         return {
             "status": "success",
             "project": saved
@@ -159,8 +285,6 @@ async def delete_project_endpoint(project_id: str) -> dict:
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Project {project_id} not found"
             )
-        
-        logger.info(f"Deleted project: {project_id}")
         return {
             "status": "success",
             "message": f"Project {project_id} deleted"
@@ -207,42 +331,43 @@ Generated by BuilderForge OKX Agentic Service Provider (ASP).
 
             # Contract code
             assets = project.get("launch_assets") or {}
-            contract_data = assets.get("smart_contract") if isinstance(assets, dict) else {}
-            contract_code = contract_data.get("code") if isinstance(contract_data, dict) else """// SPDX-License-Identifier: MIT
+            contract_code = assets.get("smart_contract_code") if isinstance(assets, dict) else """// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
-
-contract BuilderForgeToken {
-    string public name = "BuilderForge Token";
-    string public symbol = "BFT";
-    uint8 public decimals = 18;
-    uint256 public totalSupply = 1000000 * 10**18;
-}"""
+contract BuilderForgeToken { string public name = "BuilderForge Token"; }"""
             zip_file.writestr("contract.sol", contract_code)
 
             # Tokenomics
-            tokenomics_data = assets.get("tokenomics") if isinstance(assets, dict) else {
-                "name": project.get("title"),
-                "total_supply": "100,000,000",
-                "allocations": {"Community": "50%", "Team": "20%", "Ecosystem": "30%"}
+            tokenomics_data = {
+                "token_name": assets.get("token_name", project.get("title")),
+                "token_symbol": assets.get("token_symbol", "BFT"),
+                "total_supply": assets.get("total_supply", "100,000,000"),
+                "allocations": assets.get("allocations", {"Community": "50%", "Team": "20%", "Ecosystem": "30%"})
             }
             zip_file.writestr("tokenomics.json", json.dumps(tokenomics_data, indent=2))
 
             # Pitch Deck
-            pitch_data = assets.get("pitch_deck") if isinstance(assets, dict) else {
-                "problem": "Web3 launch complexity",
-                "solution": "Autonomous BuilderForge AI Crew execution"
-            }
-            zip_file.writestr("pitch_deck.md", f"# Pitch Deck\n\n```json\n{json.dumps(pitch_data, indent=2)}\n```")
+            pitch_text = f"""# Pitch Deck: {project.get('title')}
+
+## Elevator Pitch
+{assets.get('elevator_pitch', 'Autonomous Web3 application launched with BuilderForge on OKX.')}
+
+## Key Features
+- Multi-Agent Pipeline Execution
+- Native OKX Wallet & X Layer Testnet Deployment
+- Listed Agentic Service Provider (ASP) Manifest
+
+## Marketing Hooks
+""" + "\n".join([f"- {hook}" for hook in assets.get('marketing_hooks', [])])
+
+            zip_file.writestr("pitch_deck.md", pitch_text)
 
             # ASP Manifest
-            manifest_data = {
-                "manifest_version": "1.0.0",
+            metrics = project.get("metrics_report") or {}
+            manifest_data = metrics.get("asp_manifest") or {
+                "schema_version": "1.0.0",
                 "service_id": f"asp.{project_id}.okx",
                 "title": project.get("title"),
                 "description": project.get("description"),
-                "agents": ["Coordinator", "Researcher", "Creator", "Executor", "Analyzer"],
-                "pricing": {"model": "PAY_PER_JOB", "price_okt": "0.05"},
-                "network": "OKC Testnet / OKX Chain"
             }
             zip_file.writestr("asp_manifest.json", json.dumps(manifest_data, indent=2))
 
