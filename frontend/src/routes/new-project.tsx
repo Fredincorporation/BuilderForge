@@ -1,10 +1,16 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-import { useCreateProject } from "../../hooks/useApi";
+import { useCreateProject } from "../hooks/useApi";
 import { Loader } from "lucide-react";
 
+import { AuthGuard } from "../components/AuthGuard";
+
 export const Route = createFileRoute("/new-project")({
-  component: NewProject,
+  component: () => (
+    <AuthGuard pageTitle="New Project">
+      <NewProject />
+    </AuthGuard>
+  ),
 });
 
 function NewProject() {

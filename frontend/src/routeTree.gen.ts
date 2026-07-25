@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AspListingRouteImport } from './routes/asp-listing'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as DealflowRouteImport } from './routes/dealflow'
 import { Route as LaunchpadRouteImport } from './routes/launchpad'
@@ -18,6 +19,11 @@ import { Route as NewProjectRouteImport } from './routes/new-project'
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AspListingRoute = AspListingRouteImport.update({
+  id: '/asp-listing',
+  path: '/asp-listing',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DashboardRoute = DashboardRouteImport.update({
@@ -43,6 +49,7 @@ const NewProjectRoute = NewProjectRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/asp-listing': typeof AspListingRoute
   '/dashboard': typeof DashboardRoute
   '/dealflow': typeof DealflowRoute
   '/launchpad': typeof LaunchpadRoute
@@ -50,6 +57,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/asp-listing': typeof AspListingRoute
   '/dashboard': typeof DashboardRoute
   '/dealflow': typeof DealflowRoute
   '/launchpad': typeof LaunchpadRoute
@@ -58,6 +66,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/asp-listing': typeof AspListingRoute
   '/dashboard': typeof DashboardRoute
   '/dealflow': typeof DealflowRoute
   '/launchpad': typeof LaunchpadRoute
@@ -65,12 +74,25 @@ export interface FileRoutesById {
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/dashboard' | '/dealflow' | '/launchpad' | '/new-project'
+  fullPaths:
+    | '/'
+    | '/asp-listing'
+    | '/dashboard'
+    | '/dealflow'
+    | '/launchpad'
+    | '/new-project'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/dashboard' | '/dealflow' | '/launchpad' | '/new-project'
+  to:
+    | '/'
+    | '/asp-listing'
+    | '/dashboard'
+    | '/dealflow'
+    | '/launchpad'
+    | '/new-project'
   id:
     | '__root__'
     | '/'
+    | '/asp-listing'
     | '/dashboard'
     | '/dealflow'
     | '/launchpad'
@@ -79,6 +101,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AspListingRoute: typeof AspListingRoute
   DashboardRoute: typeof DashboardRoute
   DealflowRoute: typeof DealflowRoute
   LaunchpadRoute: typeof LaunchpadRoute
@@ -92,6 +115,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/asp-listing': {
+      id: '/asp-listing'
+      path: '/asp-listing'
+      fullPath: '/asp-listing'
+      preLoaderRoute: typeof AspListingRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dashboard': {
@@ -127,6 +157,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AspListingRoute: AspListingRoute,
   DashboardRoute: DashboardRoute,
   DealflowRoute: DealflowRoute,
   LaunchpadRoute: LaunchpadRoute,

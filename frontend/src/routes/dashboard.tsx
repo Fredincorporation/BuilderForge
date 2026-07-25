@@ -1,13 +1,31 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useProjects } from "../../hooks/useApi";
-import { Loader } from "lucide-react";
+import { useProjects } from "../hooks/useApi";
+import { Loader, Download, Plus } from "lucide-react";
+
+import { AuthGuard } from "../components/AuthGuard";
 
 export const Route = createFileRoute("/dashboard")({
-  component: Dashboard,
+  component: () => (
+    <AuthGuard pageTitle="Dashboard">
+      <Dashboard />
+    </AuthGuard>
+  ),
 });
 
 function Dashboard() {
   const { data: projects = [], isLoading, error } = useProjects();
+
+  const handleExportZip = (projectId: string, projectTitle: string) => {
+    const apiUrl = process.env.REACT_APP_API_URL || "http://localhost:8000/api";
+    const downloadUrl = `${apiUrl}/projects/${projectId}/export`;
+    
+    const link = document.createElement("a");
+    link.href = downloadUrl;
+    link.download = `builderforge_${projectTitle.toLowerCase().replace(/\s+/g, "_")}.zip`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   return (
     <div className="flex min-h-screen bg-background">
@@ -17,16 +35,16 @@ function Dashboard() {
             {/* Header */}
             <div className="mb-8">
               <h1 className="text-4xl font-bold text-foreground">Dashboard</h1>
-              <p className="text-muted-foreground mt-2">Manage your BuilderForge projects</p>
+              <p className="text-muted-foreground mt-2">Manage and export your BuilderForge ASP projects</p>
             </div>
 
             {/* Action Buttons */}
             <div className="flex gap-4 mb-8">
               <Link
                 to="/new-project"
-                className="rounded-md bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground hover:brightness-110 transition"
+                className="inline-flex items-center gap-2 rounded-lg bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground hover:brightness-110 transition shadow-lg shadow-primary/20"
               >
-                + New Project
+                <Plus className="h-4 w-4" /> New Project
               </Link>
             </div>
 
@@ -53,43 +71,52 @@ function Dashboard() {
             ) : (
               <div className="grid gap-6">
                 {projects.map((project) => (
-                  <Link
+                  <div
                     key={project.id}
-                    to={`/project/${project.id}`}
-                    className="group block"
+                    className="bg-card border border-border rounded-xl p-6 hover:border-primary/50 transition flex flex-col justify-between"
                   >
-                    <div className="bg-card border border-border rounded-lg p-6 hover:border-primary/50 hover:bg-card/80 transition">
+                    <div>
                       <div className="flex justify-between items-start mb-4">
                         <div>
-                          <h3 className="text-lg font-semibold text-foreground group-hover:text-primary transition">
+                          <h3 className="text-xl font-bold text-foreground hover:text-primary transition">
                             {project.title}
                           </h3>
                           <p className="text-sm text-muted-foreground mt-1">
                             {project.description}
                           </p>
                         </div>
-                        <span className="text-xs font-bold uppercase tracking-widest text-primary bg-primary/10 px-3 py-1 rounded">
-                          {project.phase}
-                        </span>
-                      </div>
-
-                      {/* Progress Bar */}
-                      <div className="mt-4">
-                        <div className="flex justify-between items-center mb-2">
-                          <span className="text-xs text-muted-foreground">Progress</span>
-                          <span className="text-xs font-semibold text-foreground">
-                            {Math.round(project.progress * 100)}%
+                        <div className="flex items-center gap-3">
+                          <span className="text-xs font-bold uppercase tracking-widest text-primary bg-primary/10 px-3 py-1 rounded-md border border-primary/20">
+                            {project.phase}
                           </span>
-                        </div>
-                        <div className="h-2 bg-secondary rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-primary transition-all duration-300"
-                            style={{ width: `${project.progress * 100}%` }}
-                          />
+                          <button
+                            onClick={() => handleExportZip(project.id, project.title)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border bg-secondary/60 text-xs font-semibold text-foreground hover:bg-primary hover:text-primary-foreground hover:border-primary transition"
+                            title="Export ZIP package with contract, pitch deck, and ASP manifest"
+                          >
+                            <Download className="h-3.5 w-3.5" />
+                            Export ZIP
+                          </button>
                         </div>
                       </div>
                     </div>
-                  </Link>
+
+                    {/* Progress Bar */}
+                    <div className="mt-4 pt-4 border-t border-border/50">
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-xs font-medium text-muted-foreground">Pipeline Execution</span>
+                        <span className="text-xs font-bold font-mono text-primary">
+                          {Math.round(project.progress * 100)}%
+                        </span>
+                      </div>
+                      <div className="h-2 bg-secondary rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-primary transition-all duration-300 shadow-sm shadow-primary"
+                          style={{ width: `${project.progress * 100}%` }}
+                        />
+                      </div>
+                    </div>
+                  </div>
                 ))}
               </div>
             )}

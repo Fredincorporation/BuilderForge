@@ -18,6 +18,7 @@ from api.crew import router as crew_router
 from api.wallet import router as wallet_router
 from api.dealflow import router as dealflow_router
 from api.launchpad import router as launchpad_router
+from api.asp import router as asp_router
 
 # ============================================================================
 # Logging Setup
@@ -80,6 +81,7 @@ app.include_router(crew_router, prefix="/api", tags=["crew"])
 app.include_router(wallet_router, prefix="/api", tags=["wallet"])
 app.include_router(dealflow_router, prefix="/api", tags=["dealflow"])
 app.include_router(launchpad_router, prefix="/api", tags=["launchpad"])
+app.include_router(asp_router, prefix="/api", tags=["asp"])
 
 
 # ============================================================================

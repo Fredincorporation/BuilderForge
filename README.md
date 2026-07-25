@@ -387,13 +387,13 @@ The UI follows **cartoon brutalist** principles:
 
 - [x] Multi-agent orchestration (CrewAI)
 - [x] LangChain tool integration
-- [x] Streamlit UI with brutalist design
+- [x] 100% TypeScript (React) UI with modern dark mode design
 - [x] OKX wallet + testnet simulation
 - [x] ASP listing workflow
 - [x] Export functionality
 - [x] Works without API keys
 - [x] Comprehensive README
-- [x] Project runs with `pip install -r requirements.txt && streamlit run app.py`
+- [x] Project runs with `cd backend && python -m uvicorn app:app` and `cd frontend && npm run dev`
 
 ---
 

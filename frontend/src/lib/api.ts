@@ -4,7 +4,21 @@
  * Typed fetch wrapper for calling FastAPI backend endpoints.
  */
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || "http://localhost:8000/api";
+function getApiBaseUrl(): string {
+  try {
+    if (typeof import.meta !== "undefined" && import.meta.env?.VITE_API_URL) {
+      return import.meta.env.VITE_API_URL;
+    }
+  } catch {}
+  try {
+    if (typeof process !== "undefined" && process.env?.REACT_APP_API_URL) {
+      return process.env.REACT_APP_API_URL;
+    }
+  } catch {}
+  return "http://localhost:8000/api";
+}
+
+const API_BASE_URL = getApiBaseUrl();
 
 export interface ApiResponse<T = unknown> {
   status: string;
@@ -221,6 +235,24 @@ export const launchpadApi = {
     }),
 };
 
+export const aspApi = {
+  getManifest: () =>
+    apiCall<{ status: string; manifest: any }>("/asp/manifest", {
+      method: "GET",
+    }),
+
+  validate: (manifest: any) =>
+    apiCall<{ valid: boolean; status: string; message?: string; errors?: string[] }>("/asp/validate", {
+      method: "POST",
+      body: JSON.stringify({ manifest }),
+    }),
+
+  getPricing: () =>
+    apiCall<{ status: string; pricing_models: any[] }>("/asp/pricing", {
+      method: "GET",
+    }),
+};
+
 /**
  * Health check
  */
@@ -235,5 +267,6 @@ export default {
   walletApi,
   dealflowApi,
   launchpadApi,
+  aspApi,
   healthCheck,
 };

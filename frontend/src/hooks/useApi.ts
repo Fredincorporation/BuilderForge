@@ -13,7 +13,7 @@ import {
   type CrewTask,
   type Deal,
   type Launch,
-} from "./api";
+} from "../lib/api";
 
 /**
  * Use projects query

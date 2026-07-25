@@ -7,7 +7,6 @@ Gracefully degrades if Supabase is not configured.
 from __future__ import annotations
 
 import os
-import streamlit as st
 from typing import Any, Dict, List, Optional
 from dotenv import load_dotenv
 

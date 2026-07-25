@@ -1,9 +1,15 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useDeals } from "../../hooks/useApi";
+import { useDeals } from "../hooks/useApi";
 import { Loader } from "lucide-react";
 
+import { AuthGuard } from "../components/AuthGuard";
+
 export const Route = createFileRoute("/dealflow")({
-  component: DealFlow,
+  component: () => (
+    <AuthGuard pageTitle="DealFlow">
+      <DealFlow />
+    </AuthGuard>
+  ),
 });
 
 function DealFlow() {

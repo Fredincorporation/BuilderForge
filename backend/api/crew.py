@@ -14,6 +14,7 @@ from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor
 
 from fastapi import APIRouter, HTTPException, status
+from fastapi.responses import StreamingResponse
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -263,13 +264,10 @@ async def cancel_crew(task_id: str) -> dict:
         task["status"] = "cancelled"
         task["logs"].append(f"[{datetime.now().isoformat()}] Task cancelled by user")
         
-        logger.info(f"Cancelled crew execution: {task_id}")
-        
         return {
             "status": "success",
             "message": f"Task {task_id} cancelled"
         }
-    
     except HTTPException:
         raise
     except Exception as e:
@@ -278,3 +276,49 @@ async def cancel_crew(task_id: str) -> dict:
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=str(e)
         )
+
+
+@router.get("/crew/{task_id}/stream")
+async def stream_crew_logs(task_id: str):
+    """
+    Stream live agent execution logs via Server-Sent Events (SSE).
+    """
+    if task_id not in _tasks_db:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Task {task_id} not found"
+        )
+
+    async def event_generator():
+        last_index = 0
+        while True:
+            task = _tasks_db.get(task_id)
+            if not task:
+                break
+
+            logs = task.get("logs", [])
+            if last_index < len(logs):
+                for new_log in logs[last_index:]:
+                    payload = json.dumps({
+                        "task_id": task_id,
+                        "status": task.get("status"),
+                        "progress": task.get("progress"),
+                        "log": new_log,
+                    })
+                    yield f"data: {payload}\n\n"
+                last_index = len(logs)
+
+            if task.get("status") in ["completed", "error", "cancelled"]:
+                payload = json.dumps({
+                    "task_id": task_id,
+                    "status": task.get("status"),
+                    "progress": task.get("progress"),
+                    "result": task.get("result"),
+                    "log": f"[{datetime.now().isoformat()}] Stream ended - Status: {task.get('status')}",
+                })
+                yield f"data: {payload}\n\n"
+                break
+
+            await asyncio.sleep(0.5)
+
+    return StreamingResponse(event_generator(), media_type="text/event-stream")

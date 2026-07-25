@@ -8,6 +8,9 @@ import {
   Scripts,
 } from "@tanstack/react-router";
 import { useEffect, useState, type ReactNode } from "react";
+import { AppSidebar } from "../components/AppSidebar";
+import { Header } from "../components/Header";
+import { WalletProvider } from "../context/WalletContext";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
@@ -48,7 +51,7 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
           This page didn't load
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Something went wrong on our end. You can try refreshing or head back home.
+          {error?.message || "Something went wrong on our end. You can try refreshing or head back home."}
         </p>
         <div className="mt-6 flex flex-wrap justify-center gap-2">
           <button
@@ -120,21 +123,18 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
-  const [isClient, setIsClient] = useState(false);
-  const [SettingsPanel, setSettingsPanel] = useState<any>(null);
-
-  useEffect(() => {
-    setIsClient(true);
-    import("../components/SettingsPanel").then((mod) => {
-      setSettingsPanel(() => mod.default);
-    });
-  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>
-      {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-      <Outlet />
-      {isClient && SettingsPanel && <SettingsPanel />}
+      <WalletProvider>
+        <div className="flex min-h-screen bg-background text-foreground">
+          <AppSidebar />
+          <div className="flex-1 flex flex-col min-w-0 pb-16 md:pb-0">
+            <Header />
+            <Outlet />
+          </div>
+        </div>
+      </WalletProvider>
     </QueryClientProvider>
   );
 }

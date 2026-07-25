@@ -144,3 +144,22 @@
     color: var(--color-foreground);
   }
 }
+
+@keyframes mapDash {
+  0% {
+    stroke-dashoffset: 400;
+  }
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+.animate-dash {
+  stroke-dasharray: 20 200;
+  animation: mapDash 8s linear infinite;
+}
+
+.animate-dash-reverse {
+  stroke-dasharray: 25 180;
+  animation: mapDash 12s linear infinite reverse;
+}
