@@ -143,15 +143,11 @@ async def get_asp_pricing() -> Dict[str, Any]:
 async def submit_asp_listing(request: Dict[str, Any]) -> Dict[str, Any]:
     """Submit ASP Service Manifest to OKX.AI Marketplace Directory."""
     try:
-        manifest = request.get("manifest") or DEFAULT_ASP_MANIFEST
-        return {
-            "status": "success",
-            "submission_id": "sub_okx_asp_9821a",
-            "listing_status": "PENDING_DIRECTORY_INDEX",
-            "message": "ASP Service Manifest submitted successfully to OKX.AI Marketplace Directory",
-            "marketplace_url": "https://www.okx.com/ai/asp/builderforge",
-            "timestamp": "2026-07-25T20:06:30Z",
-        }
+        manifest = request.get("manifest") if isinstance(request, dict) and "manifest" in request else request
+        if not manifest or not isinstance(manifest, dict):
+            manifest = DEFAULT_ASP_MANIFEST
+        from utils.okx_integration import submit_asp_listing as okx_submit
+        return okx_submit(manifest)
     except Exception as e:
         logger.error(f"Error submitting ASP listing: {e}")
         raise HTTPException(

@@ -1,9 +1,14 @@
 from __future__ import annotations
 
 from enum import Enum
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
-from pydantic import BaseModel, Field, validator
+try:
+    from pydantic import BaseModel, Field, field_validator, ConfigDict
+    HAS_PYDANTIC_V2 = True
+except ImportError:
+    from pydantic import BaseModel, Field, validator
+    HAS_PYDANTIC_V2 = False
 
 
 class ProjectPhase(str, Enum):
@@ -23,7 +28,7 @@ class WalletConnection(BaseModel):
     balance: str = "0"
     network: str = "testnet"
     error: Optional[str] = None
-    last_updated: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
+    last_updated: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
 
 class TransactionDetail(BaseModel):
@@ -81,13 +86,21 @@ class ProjectData(BaseModel):
     transactions: List[TransactionDetail] = Field(default_factory=list)
     exported_formats: List[str] = Field(default_factory=list)
 
-    class Config:
-        arbitrary_types_allowed = True
-        extra = "ignore"
+    if HAS_PYDANTIC_V2:
+        model_config = ConfigDict(arbitrary_types_allowed=True, extra="ignore")
 
-    @validator("progress")
-    def progress_must_be_between_zero_and_one(cls, value: float) -> float:
-        return max(0.0, min(value, 1.0))
+        @field_validator("progress")
+        @classmethod
+        def progress_must_be_between_zero_and_one(cls, value: float) -> float:
+            return max(0.0, min(value, 1.0))
+    else:
+        class Config:
+            arbitrary_types_allowed = True
+            extra = "ignore"
+
+        @validator("progress")
+        def progress_must_be_between_zero_and_one(cls, value: float) -> float:
+            return max(0.0, min(value, 1.0))
 
     def add_transaction(self, tx: TransactionDetail) -> None:
         self.transactions.append(tx)
@@ -98,4 +111,4 @@ class AgentMemoryRecord(BaseModel):
     source: str = "agent"
     content: str
     metadata: Dict[str, Any] = Field(default_factory=dict)
-    timestamp: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
+    timestamp: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())

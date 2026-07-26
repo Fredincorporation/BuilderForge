@@ -1,0 +1,57 @@
+{
+  "asp_version": "1.0.0",
+  "name": "BuilderForge Verification Agent",
+  "description": "Autonomous AI Agentic Service Provider for OKX X Layer & AI Ecosystem",
+  "publisher": "BuilderForge",
+  "website": "https://builderforge.ai",
+  "contact_email": "verify@builderforge.ai",
+  "capabilities": [
+    "Market Intelligence",
+    "Tokenomics",
+    "Smart Contract Deployment",
+    "ASP Listing"
+  ],
+  "pricing": {
+    "model": "pay_per_job",
+    "currency": "USD",
+    "details": [
+      {
+        "tier": "free",
+        "requests_per_day": 10,
+        "price": 0
+      },
+      {
+        "tier": "pro",
+        "requests_per_day": 100,
+        "price": 29
+      },
+      {
+        "tier": "enterprise",
+        "requests_per_day": 10000,
+        "price": 299
+      }
+    ]
+  },
+  "blockchain": {
+    "supported_chains": [
+      "OKC",
+      "Ethereum",
+      "Polygon",
+      "Arbitrum"
+    ],
+    "testnet": true,
+    "mainnet": false
+  },
+  "agent_components": {
+    "coordinator": "BuilderForge Coordinator Agent",
+    "researcher": "BuilderForge Researcher Agent",
+    "creator": "BuilderForge Creator Agent",
+    "executor": "BuilderForge Executor Agent",
+    "analyzer": "BuilderForge Analyzer Agent"
+  },
+  "submission_metadata": {
+    "submitted_at": "2026-07-26T12:18:46.608602+00:00",
+    "hackathon": "OKX AI Genesis Hackathon",
+    "team": "BuilderForge Team"
+  }
+}

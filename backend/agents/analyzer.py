@@ -10,6 +10,8 @@ try:
 except ImportError:
     from ..tools.content_tools import generate_asp_manifest_json
 
+from utils.okx_integration import submit_asp_listing
+
 logger = logging.getLogger(__name__)
 
 
@@ -30,10 +32,18 @@ class AnalyzerAgent:
     ) -> Dict[str, Any]:
         """Compute ASP metrics, verification score, and ASP manifest."""
         logger.info(f"[Analyzer Agent] Scoring ASP readiness for '{project_title}'...")
-        
+
         asp_manifest = generate_asp_manifest_json(project_title, description, project_id)
+        asp_submission = submit_asp_listing(asp_manifest)
+        if asp_submission.get("status") in ("pending_review", "approved", "success") or asp_submission.get("success"):
+            try:
+                from utils.state import _state
+                _state["okx_asp_listed"] = True
+            except Exception:
+                pass
+
         readiness_score = 94
-        
+
         score_reasoning = [
             "Verified compilation of OpenZeppelin ERC-20 smart contract",
             "Confirmed deployment & RPC log sequence on OKX X Layer Testnet (Chain ID 195)",
@@ -46,7 +56,7 @@ class AnalyzerAgent:
             {"risk": "Market Volatility", "severity": "LOW", "mitigation": "Staggered token allocation schedule across 24 months"},
             {"risk": "Smart Contract Risk", "severity": "LOW", "mitigation": "Standardized OpenZeppelin ERC-20 code audited pattern"},
         ]
-        
+
         growth_projections = {
             "Month 1 Holders": "2,500+",
             "Target TVL": "$500,000 OKT equivalent",
@@ -67,6 +77,7 @@ class AnalyzerAgent:
             "score_reasoning": score_reasoning,
             "asp_status": "VERIFIED_ASP_READY",
             "asp_manifest": asp_manifest,
+            "asp_submission": asp_submission,
             "risk_factors": risk_factors,
             "growth_projections": growth_projections,
             "recommended_next_steps": recommended_next_steps,

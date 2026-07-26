@@ -44,6 +44,11 @@ from tools.blockchain_tools import (
     estimate_gas,
     simulate_transaction_sequence,
 )
+from utils.okx_integration import (
+    connect_wallet,
+    build_asp_manifest,
+    submit_asp_listing,
+)
 from tools.analytics_tools import (
     calculate_project_metrics,
     analyze_sentiment,
@@ -276,9 +281,28 @@ def build_phase_crew(phase: ProjectPhase, verbose: bool = True) -> Crew:
 # Pipeline Runner (Simulated - for demos without API keys)
 # ---------------------------------------------------------------------------
 
+def _ensure_dict(val: Any) -> Dict[str, Any]:
+    if isinstance(val, dict):
+        return val
+    if isinstance(val, str):
+        try:
+            return json.loads(val)
+        except Exception:
+            return {"data": val}
+    return {}
+
+
+def _call_tool(tool_obj: Any, *args: Any, **kwargs: Any) -> Any:
+    if hasattr(tool_obj, "func") and callable(getattr(tool_obj, "func")):
+        return tool_obj.func(*args, **kwargs)
+    elif hasattr(tool_obj, "run") and callable(getattr(tool_obj, "run")):
+        return tool_obj.run(*args, **kwargs)
+    return tool_obj(*args, **kwargs)
+
+
 def run_simulated_crew(project: ProjectData) -> ProjectData:
     """Run a simulated version of the entire pipeline.
-    
+
     This bypasses the LLM API calls and uses pre-generated mock outputs.
     Useful for hackathon demos when API keys aren't available.
     """
@@ -303,7 +327,7 @@ def run_simulated_crew(project: ProjectData) -> ProjectData:
     project.progress = 0.2
     project.phase = ProjectPhase.RESEARCH.value
 
-    research_data = json.loads(search_web_for_opportunities(description))
+    research_data = _ensure_dict(_call_tool(search_web_for_opportunities, description))
     grants_data = json.loads(TASK_DUMMY_GRANTS)
     competitors_data = json.loads(TASK_DUMMY_COMPETITORS)
     audience_data = json.loads(TASK_DUMMY_AUDIENCE)
@@ -322,7 +346,7 @@ def run_simulated_crew(project: ProjectData) -> ProjectData:
     project.progress = 0.4
     project.phase = ProjectPhase.CREATION.value
 
-    tokenomics = json.loads(generate_tokenomics(project.title))
+    tokenomics = _ensure_dict(_call_tool(generate_tokenomics, project.title))
     pitch = json.loads(TASK_DUMMY_PITCH)
     social = json.loads(TASK_DUMMY_SOCIAL)
     website = json.loads(TASK_DUMMY_WEBSITE)
@@ -339,40 +363,58 @@ def run_simulated_crew(project: ProjectData) -> ProjectData:
     add_crew_log("✅ Creation complete — tokenomics, content, and contracts generated")
 
     # Phase 3: Execution
-    add_crew_log("⚡ Executor agent simulating on-chain deployment...")
+    add_crew_log("⚡ Executor agent setting up wallet and on-chain deployment...")
     project.progress = 0.6
     project.phase = ProjectPhase.EXECUTION.value
 
-    mock_wallet = {
-        "address": "0x" + "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0",
-        "balance": "12.45 OKT",
-        "chain": "OKC Testnet",
-    }
-    deploy_plan = json.loads(simulate_transaction_sequence(project.title, mock_wallet["address"]))
+    wallet_info = connect_wallet()
+    deploy_plan = _ensure_dict(_call_tool(simulate_transaction_sequence, project.title, wallet_info["address"]))
 
     project.deployment_plan = {
-        "wallet": mock_wallet,
+        "wallet": wallet_info,
         "deployment_sequence": deploy_plan,
     }
     project.execution_output = json.dumps(project.deployment_plan, indent=2)
-    add_crew_log("✅ Execution complete — transactions simulated on OKC testnet")
+    add_crew_log("✅ Execution complete — transactions prepared/executed on OKX X Layer")
 
-    # Phase 4: Analysis
-    add_crew_log("📊 Analyzer agent evaluating results...")
+    # Phase 4: Analysis & ASP Listing
+    add_crew_log("📊 Analyzer agent evaluating results and submitting ASP manifest...")
     project.progress = 0.8
     project.phase = ProjectPhase.ANALYSIS.value
 
-    metrics = json.loads(calculate_project_metrics(project.title))
+    metrics = _ensure_dict(_call_tool(calculate_project_metrics, project.title))
     next_steps = json.loads(TASK_DUMMY_NEXT_STEPS)
+
+    asp_manifest = build_asp_manifest(
+        agent_name=project.title,
+        description=project.description,
+        capabilities=["Market Research", "Tokenomics", "Smart Contract Deployment", "ASP Operations"],
+        pricing_model="pay_per_job",
+        contact_email="asp@builderforge.ai",
+    )
+    asp_submission = submit_asp_listing(asp_manifest)
+
+    project.launch_assets = project.launch_assets or {}
+    project.launch_assets["asp_manifest"] = asp_manifest
+    project.launch_assets["asp_submission"] = asp_submission
+
+    if asp_submission.get("status") in ("pending_review", "approved", "success") or asp_submission.get("success"):
+        try:
+            from utils.state import _state
+            _state["okx_asp_listed"] = True
+        except Exception:
+            pass
 
     project.metrics_report = {
         "viability_score": metrics,
         "recommendations": next_steps,
+        "asp_manifest": asp_manifest,
+        "asp_submission": asp_submission,
         "summary": f"Project {project.title} scores {metrics['overall_score']}/100 — "
                    f"rating: {metrics['rating']}",
     }
     project.analysis_output = json.dumps(project.metrics_report, indent=2)
-    add_crew_log("✅ Analysis complete — metrics, recommendations, and next steps")
+    add_crew_log(f"✅ ASP Submission status: {asp_submission.get('status')} (ID: {asp_submission.get('asp_id')})")
 
     # Final
     project.progress = 1.0

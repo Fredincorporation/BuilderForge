@@ -13,7 +13,12 @@ class Settings(BaseSettings):
     SUPABASE_URL: Optional[str] = None
     SUPABASE_KEY: Optional[str] = None
     OKX_API_KEY: Optional[str] = None
+    OKX_SECRET_KEY: Optional[str] = None
+    OKX_PASSPHRASE: Optional[str] = None
+    OKX_PROJECT_ID: Optional[str] = None
     OKX_ENV: str = "testnet"
+    OKX_RPC_URL: Optional[str] = "https://testrpc.xlayer.tech"
+    OKX_USE_REAL_ASP: bool = False
     AGENT_TIMEOUT_SECONDS: int = 120
     AGENT_MAX_ITER: int = 10
     AGENT_MAX_RPM: int = 10

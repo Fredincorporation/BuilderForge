@@ -25,7 +25,16 @@ class Settings(BaseSettings):
     ANTHROPIC_API_KEY: Optional[str] = os.getenv("ANTHROPIC_API_KEY", "")
     OPENAI_API_KEY: Optional[str] = os.getenv("OPENAI_API_KEY", "")
 
+    # OKX API Credentials & Flags
+    OKX_API_KEY: Optional[str] = os.getenv("OKX_API_KEY", "")
+    OKX_SECRET_KEY: Optional[str] = os.getenv("OKX_SECRET_KEY", "")
+    OKX_PASSPHRASE: Optional[str] = os.getenv("OKX_PASSPHRASE", "")
+    OKX_PROJECT_ID: Optional[str] = os.getenv("OKX_PROJECT_ID", "")
+    OKX_ENV: str = os.getenv("OKX_ENV", "testnet")
+    OKX_USE_REAL_ASP: bool = os.getenv("OKX_USE_REAL_ASP", "false").lower() == "true"
+
     # OKX Blockchain Config
+    OKX_RPC_URL: str = os.getenv("OKX_RPC_URL", os.getenv("OKX_TESTNET_RPC", "https://testrpc.xlayer.tech"))
     OKX_TESTNET_RPC: str = os.getenv("OKX_TESTNET_RPC", "https://testrpc.xlayer.tech")
     OKX_CHAIN_ID: int = int(os.getenv("OKX_CHAIN_ID", "195"))
     OKX_EXPLORER_BASE: str = os.getenv("OKX_EXPLORER_BASE", "https://www.okx.com/explorer/xlayer-test")
