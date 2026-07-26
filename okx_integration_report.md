@@ -1,18 +1,18 @@
 # BuilderForge OKX.AI ASP & Web3 Integration Report
 
-- **Date**: 2026-07-26T12:18:49.214048+00:00
+- **Date**: 2026-07-26T12:44:23.791274+00:00
 - **Environment**: testnet
 - **RPC URL**: `https://testrpc.xlayer.tech`
-- **Real ASP Submission Flag (`OKX_USE_REAL_ASP`)**: `False`
+- **Real ASP Submission Flag (`OKX_USE_REAL_ASP`)**: `True`
 - **Real RPC Connection Active**: `True`
 
 ## 1. Integration Verification Summary
 
 | Component | Status | Details |
 | :--- | :---: | :--- |
-| **Wallet & RPC Connection** | `PASS` | Address: `0x9cfe93debaaab849d4dc7f87b14de367bc11b59b` (Chain ID: `1952`, Block: `36609487`) |
+| **Wallet & RPC Connection** | `PASS` | Address: `0x32496a5df0d82820b19d05a4e95c171cb99e400f` (Chain ID: `1952`, Block: `36611018`) |
 | **ASP Manifest Creation** | `PASS` | ASP Version: `1.0.0` (Saved to `asp_manifest.json`) |
-| **ASP Listing Submission** | `PASS` | ASP ID: `asp_74ad0710` (Status: `pending_review`) |
+| **ASP Listing Submission** | `FAIL` | ASP ID: `asp_unknown` (Status: `submission_error`) |
 | **ASP Status Query** | `PASS` | Current Directory Status: `approved` |
 | **Blockchain Tools Suite** | `PASS` | Passed 6 tools |
 
@@ -60,10 +60,10 @@ To transition from simulated / testnet mode to production real OKX.AI ASP direct
 > Our system generates standardized OKX ASP Manifests (`asp_version: 1.0.0`) and interacts with the OKX X Layer testnet RPC (Chain ID: 1952 / 195).
 >
 > We request directory indexing approval for our ASP submission:
-> - **ASP ID**: `asp_74ad0710`
+> - **ASP ID**: `asp_unknown`
 > - **Provider Name**: BuilderForge Agentic Launchpad
 > - **RPC Chain**: OKX X Layer Testnet (`https://testrpc.xlayer.tech`)
-> - **Manifest URL**: `https://www.okx.com/ai/asp/asp_74ad0710`
+> - **Manifest URL**: `None`
 >
 > Attached is our full manifest JSON (`asp_manifest.json`) for review.
 >

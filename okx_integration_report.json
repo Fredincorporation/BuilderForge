@@ -1,25 +1,25 @@
 {
   "title": "BuilderForge OKX Web3 & ASP Integration Verification Report",
-  "timestamp": "2026-07-26T12:18:49.214048+00:00",
+  "timestamp": "2026-07-26T12:44:23.791274+00:00",
   "environment": {
     "okx_env": "testnet",
     "okx_rpc_url": "https://testrpc.xlayer.tech",
-    "real_asp_enabled": false,
+    "real_asp_enabled": true,
     "real_rpc_enabled": true
   },
   "wallet_verification": {
     "status": "PASS",
-    "address": "0x9cfe93debaaab849d4dc7f87b14de367bc11b59b",
+    "address": "0x32496a5df0d82820b19d05a4e95c171cb99e400f",
     "chain_id": 1952,
     "chain_name": "OKC Testnet",
-    "block_number": 36609487,
+    "block_number": 36611018,
     "balance": "12.45 OKT"
   },
   "asp_verification": {
-    "status": "PASS",
-    "asp_id": "asp_74ad0710",
-    "submission_status": "pending_review",
-    "listing_url": "https://www.okx.com/ai/asp/asp_74ad0710",
+    "status": "FAIL",
+    "asp_id": "asp_unknown",
+    "submission_status": "submission_error",
+    "listing_url": null,
     "query_status": "approved"
   },
   "tools_verification": {

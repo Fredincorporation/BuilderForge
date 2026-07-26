@@ -9,6 +9,11 @@ export function Header() {
     <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border/60 bg-background/85 px-6 backdrop-blur-md">
       {/* Brand Label on top bar */}
       <div className="flex items-center gap-2 md:hidden">
+        <img
+          src="/builderforge-logo.png"
+          alt="BuilderForge logo"
+          className="h-8 w-8 rounded-md border border-border/20 bg-white/5 object-contain"
+        />
         <span className="text-lg font-bold tracking-tight text-foreground">BuilderForge</span>
       </div>
       <div className="hidden md:block">

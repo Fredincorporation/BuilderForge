@@ -47,9 +47,11 @@ export function AppSidebar() {
       {/* ========================================================================= */}
       <aside className="hidden md:flex flex-col w-64 shrink-0 border-r border-border bg-[var(--sidebar-bg)] min-h-screen">
         <div className="flex items-center gap-3 px-6 pt-6 pb-8">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-md shadow-primary/20">
-            <Hammer className="h-5 w-5" />
-          </div>
+          <img
+            src="/builderforge-logo.png"
+            alt="BuilderForge logo"
+            className="h-10 w-10 rounded-lg border border-border/20 bg-white/5 object-contain p-1 shadow-md shadow-primary/20"
+          />
           <span className="text-xl font-bold tracking-tight text-foreground">BuilderForge</span>
         </div>
 
