@@ -1,24 +1,23 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
-import { 
-  Loader, 
-  CheckCircle, 
-  Copy, 
-  Code, 
-  ShieldCheck, 
-  DollarSign, 
-  Cpu, 
-  Check, 
-  Play, 
-  Sparkles, 
+import {
+  Loader,
+  CheckCircle,
+  Copy,
+  ShieldCheck,
+  DollarSign,
+  Cpu,
+  Check,
+  Play,
+  Sparkles,
   Terminal,
-  ExternalLink,
   X,
   Upload,
   AlertCircle,
   CheckCircle2,
   FileCode,
-  ArrowRight
+  ArrowRight,
+  ExternalLink
 } from "lucide-react";
 import { aspApi } from "../lib/api";
 import { AuthGuard } from "../components/AuthGuard";
@@ -31,11 +30,39 @@ export const Route = createFileRoute("/asp-listing")({
   ),
 });
 
+// Helper for reliable clipboard copying across browser contexts
+const copyTextToClipboard = async (text: string): Promise<boolean> => {
+  if (navigator.clipboard && window.isSecureContext) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch {
+      // fallback if clipboard API fails
+    }
+  }
+  try {
+    const textArea = document.createElement("textarea");
+    textArea.value = text;
+    textArea.style.position = "fixed";
+    textArea.style.left = "-999999px";
+    textArea.style.top = "-999999px";
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+    const successful = document.execCommand("copy");
+    document.body.removeChild(textArea);
+    return successful;
+  } catch {
+    return false;
+  }
+};
+
 export function AspListingPage() {
   const [manifest, setManifest] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
   const [modalCopied, setModalCopied] = useState(false);
+  const [txCopied, setTxCopied] = useState(false);
   const [testResult, setTestResult] = useState<any>(null);
   const [validating, setValidating] = useState(false);
 
@@ -63,36 +90,79 @@ export function AspListingPage() {
       });
   }, []);
 
-  const handleCopyManifest = (isModal: boolean = false) => {
+  const handleCopyManifest = async (isModal: boolean = false) => {
     if (!manifest) return;
-    navigator.clipboard.writeText(JSON.stringify(manifest, null, 2));
-    if (isModal) {
-      setModalCopied(true);
-      setTimeout(() => setModalCopied(false), 2000);
-    } else {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+    const manifestStr = JSON.stringify(manifest, null, 2);
+    const ok = await copyTextToClipboard(manifestStr);
+    if (ok) {
+      if (isModal) {
+        setModalCopied(true);
+        setTimeout(() => setModalCopied(false), 2000);
+      } else {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      }
+    }
+  };
+
+  const handleCopyTxHash = async (txHash: string) => {
+    const ok = await copyTextToClipboard(txHash);
+    if (ok) {
+      setTxCopied(true);
+      setTimeout(() => setTxCopied(false), 2000);
     }
   };
 
   const handleValidate = async () => {
+    if (!manifest) {
+      setTestResult({
+        valid: false,
+        message: "No manifest available to validate."
+      });
+      return;
+    }
     setValidating(true);
     setTestResult(null);
     try {
       const res = await aspApi.validate(manifest);
-      setTestResult({
-        valid: res.valid,
-        status: res.status,
-        message: "Manifest is valid against OKX.AI Marketplace Standard v1.0.0",
-        verified_at: new Date().toISOString(),
-      });
-      setToastMessage("✓ Manifest is valid against OKX.AI Marketplace Standard v1.0.0");
-      setTimeout(() => setToastMessage(null), 4500);
+      if (res.valid) {
+        const msg = "Manifest is valid against OKX.AI Marketplace Standard v1.0.0";
+        setTestResult({
+          valid: true,
+          status: res.status || "success",
+          message: msg,
+          verified_at: new Date().toISOString(),
+          details: {
+            schemaVersion: manifest.schema_version || "1.0.0",
+            agentCount: manifest.agents?.length || 0,
+            pricingCount: manifest.pricing_models?.length || 0
+          }
+        });
+        setToastMessage(msg);
+        setTimeout(() => setToastMessage(null), 4500);
+      } else {
+        const errorText = res.errors && res.errors.length > 0
+          ? res.errors.join("; ")
+          : res.message || "Manifest validation failed against OKX.AI Marketplace Standard v1.0.0";
+        setTestResult({
+          valid: false,
+          status: "error",
+          message: errorText,
+          errors: res.errors || [errorText]
+        });
+        setToastMessage("Validation error: " + errorText);
+        setTimeout(() => setToastMessage(null), 4500);
+      }
     } catch (err: any) {
+      const errMsg = err?.message || "Validation failed against OKX.AI Marketplace Standard v1.0.0";
       setTestResult({
         valid: false,
-        message: err.message || "Validation failed against OKX.AI Marketplace Standard v1.0.0"
+        status: "error",
+        message: errMsg,
+        errors: [errMsg]
       });
+      setToastMessage("Validation error: " + errMsg);
+      setTimeout(() => setToastMessage(null), 4500);
     } finally {
       setValidating(false);
     }
@@ -101,35 +171,30 @@ export function AspListingPage() {
   const handleSimulateHire = async () => {
     setIsHiring(true);
     setHiringSimulation(null);
-    setHiringLogs(["[0.0s] Incoming job call from external agent: agent.okx.deai_trader_v2"]);
+    setHiringLogs(["[Step 1/3] Request Received: External agent (agent.okx.deai_trader_v2) requesting ASP service call"]);
 
     try {
       await new Promise(r => setTimeout(r, 350));
       setHiringLogs(prev => [
         ...prev,
-        "[0.4s] Confirming 0.05 OKT micropayment transaction on OKX X Layer Testnet...",
-      ]);
-
-      await new Promise(r => setTimeout(r, 450));
-      setHiringLogs(prev => [
-        ...prev,
-        "[0.8s] Delegating task payload to Coordinator & Executor Agent crew...",
+        "[Step 2/3] Payment Confirmed: Verified 0.05 OKT micropayment on OKX X Layer Testnet (Chain ID 195)",
       ]);
 
       await new Promise(r => setTimeout(r, 400));
       setHiringLogs(prev => [
         ...prev,
-        "[1.2s] Proof of execution generated & block #14,892,105 confirmed!",
+        "[Step 3/3] Agent Response: Coordinator & Executor Crew processed task & generated Proof of Execution",
       ]);
 
+      await new Promise(r => setTimeout(r, 350));
       setHiringSimulation({
         status: "JOB_COMPLETED",
         client_agent_id: "agent.okx.deai_trader_v2",
         asp_service: "asp.builderforge.okx",
         job_type: "FULL_LAUNCHPAD_PIPELINE",
         payment_status: "PAID 0.05 OKT",
-        tx_hash: "0x39a01f82b74c102a984019283f1",
-        execution_time_sec: 1.2,
+        tx_hash: "0x39a01f82b74c102a984019283f1e948c2b71",
+        execution_time_sec: 1.1,
         proof_of_execution: {
           tokenomics_minted: true,
           contract_verified: true,
@@ -254,50 +319,82 @@ export function AspListingPage() {
                     </h3>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    Test how third-party AI agents on OKX.AI hire BuilderForge ASP via machine API.
+                    Simulate a third-party AI agent hiring BuilderForge ASP via Machine API with automated OKT micropayment settlement.
                   </p>
-                  
+
                   <button
                     onClick={handleSimulateHire}
                     disabled={isHiring}
-                    className="w-full py-2.5 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-purple-500/20 cursor-pointer disabled:opacity-60"
+                    className="w-full py-2.5 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-purple-500/20 cursor-pointer disabled:opacity-60 transition"
                   >
                     {isHiring ? <Loader className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4 fill-white" />}
-                    {isHiring ? "Simulating Agent Call..." : "Simulate External Agent Call (0.05 OKT)"}
+                    {isHiring ? "Simulating Machine Call..." : "Simulate External Agent Call (0.05 OKT)"}
                   </button>
 
                   {/* Hiring Simulation Stream & Proof */}
                   {hiringLogs.length > 0 && (
                     <div className="bg-black/95 p-3.5 rounded-lg text-[11px] font-mono text-purple-300 border border-purple-500/30 space-y-2 shadow-inner">
-                      <div className="flex items-center gap-2 border-b border-purple-900/50 pb-2 text-purple-400 font-bold">
-                        <Terminal className={`h-3.5 w-3.5 ${isHiring ? "animate-pulse" : ""}`} />
-                        <span>Machine API Execution Stream</span>
+                      <div className="flex items-center gap-2 border-b border-purple-900/50 pb-2 text-purple-400 font-bold justify-between">
+                        <span className="flex items-center gap-1.5">
+                          <Terminal className={`h-3.5 w-3.5 ${isHiring ? "animate-pulse" : ""}`} />
+                          Machine API Execution Sequence
+                        </span>
+                        {isHiring && <span className="text-[10px] text-purple-400 animate-pulse font-mono">Processing...</span>}
                       </div>
-                      <div className="space-y-1">
+                      <div className="space-y-1.5 pt-1">
                         {hiringLogs.map((log, idx) => (
-                          <p key={idx} className="leading-snug flex gap-1.5 text-[10px]">
-                            <span className="text-purple-500 select-none">&gt;</span>
-                            <span>{log}</span>
-                          </p>
+                          <div key={idx} className="flex items-start gap-2 text-[11px] leading-relaxed">
+                            <span className="text-purple-400 font-bold shrink-0">&gt;</span>
+                            <span className={idx === hiringLogs.length - 1 && isHiring ? "text-purple-200 font-semibold" : "text-purple-300/90"}>
+                              {log}
+                            </span>
+                          </div>
                         ))}
                       </div>
                     </div>
                   )}
 
                   {hiringSimulation && !isHiring && (
-                    <div className="bg-emerald-950/40 p-3.5 rounded-lg text-xs border border-emerald-500/40 space-y-2 animate-in fade-in duration-300">
-                      <div className="flex items-center justify-between">
+                    <div className="bg-emerald-950/40 p-4 rounded-xl text-xs border border-emerald-500/40 space-y-3 animate-in fade-in duration-300 shadow-md">
+                      <div className="flex items-center justify-between border-b border-emerald-800/40 pb-2">
                         <p className="text-emerald-400 font-bold flex items-center gap-1.5 text-xs">
-                          <CheckCircle2 className="h-4 w-4 shrink-0" /> Job Executed & Verified!
+                          <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" />
+                          Hiring Test Succeeded
                         </p>
-                        <span className="text-[10px] bg-emerald-900/80 text-emerald-300 px-2 py-0.5 rounded font-mono font-bold">
+                        <span className="text-[10px] bg-emerald-900/80 text-emerald-300 border border-emerald-500/40 px-2 py-0.5 rounded font-mono font-bold">
                           {hiringSimulation.payment_status}
                         </span>
                       </div>
-                      <div className="text-[11px] font-mono space-y-1 text-muted-foreground">
-                        <p>Client Agent: <span className="text-foreground font-semibold">{hiringSimulation.client_agent_id}</span></p>
-                        <p>Tx Hash: <span className="text-emerald-300 break-all">{hiringSimulation.tx_hash}</span></p>
-                        <p>Execution Time: <span className="text-cyan-300">{hiringSimulation.execution_time_sec}s</span></p>
+
+                      <div className="text-[11px] font-mono space-y-2 text-emerald-200/90">
+                        <div className="flex justify-between items-center">
+                          <span className="text-muted-foreground font-sans">Client Agent:</span>
+                          <span className="text-foreground font-semibold bg-secondary/60 px-1.5 py-0.5 rounded">{hiringSimulation.client_agent_id}</span>
+                        </div>
+
+                        <div className="flex justify-between items-center">
+                          <span className="text-muted-foreground font-sans">Execution Time:</span>
+                          <span className="text-cyan-300 font-bold">{hiringSimulation.execution_time_sec}s</span>
+                        </div>
+
+                        <div className="space-y-1 pt-1 border-t border-emerald-900/40">
+                          <span className="text-muted-foreground font-sans block text-[10px]">Simulated Tx Hash:</span>
+                          <div className="flex items-center justify-between bg-black/60 p-2 rounded border border-emerald-500/30 gap-2">
+                            <span className="text-emerald-400 font-mono text-[10px] truncate">{hiringSimulation.tx_hash}</span>
+                            <button
+                              onClick={() => handleCopyTxHash(hiringSimulation.tx_hash)}
+                              className="text-[10px] font-sans bg-emerald-950 hover:bg-emerald-900 border border-emerald-500/40 text-emerald-300 px-2 py-1 rounded transition flex items-center gap-1 shrink-0 cursor-pointer"
+                            >
+                              {txCopied ? <Check className="h-3 w-3 text-emerald-400" /> : <Copy className="h-3 w-3" />}
+                              {txCopied ? "Copied" : "Copy Hash"}
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="pt-1 flex items-center justify-between text-[10px] text-emerald-300 font-sans">
+                          <span>Proof of Execution Score:</span>
+                          <span className="font-mono font-bold text-emerald-400">98/100 (VERIFIED)</span>
+                        </div>
                       </div>
                     </div>
                   )}
@@ -305,19 +402,45 @@ export function AspListingPage() {
 
                 {/* Validation Result Banner */}
                 {testResult && (
-                  <div className={`rounded-xl p-5 border text-xs space-y-2 shadow-lg animate-in fade-in duration-200 ${
-                    testResult.valid 
-                      ? "bg-emerald-950/40 border-emerald-500/50 text-emerald-300" 
-                      : "bg-destructive/10 border-destructive text-destructive"
+                  <div className={`rounded-xl p-5 border text-xs space-y-2.5 shadow-lg animate-in fade-in duration-200 ${
+                    testResult.valid
+                      ? "bg-emerald-950/40 border-emerald-500/50 text-emerald-300"
+                      : "bg-destructive/10 border-destructive/60 text-destructive"
                   }`}>
-                    <p className="font-extrabold flex items-center gap-2 text-sm">
-                      {testResult.valid ? <CheckCircle className="h-4.5 w-4.5 text-emerald-400 shrink-0" /> : <AlertCircle className="h-4.5 w-4.5 shrink-0" />}
-                      {testResult.valid ? "OKX.AI Manifest Verified" : "Validation Error"}
-                    </p>
+                    <div className="flex items-center justify-between">
+                      <p className="font-extrabold flex items-center gap-2 text-sm">
+                        {testResult.valid ? <CheckCircle className="h-4.5 w-4.5 text-emerald-400 shrink-0" /> : <AlertCircle className="h-4.5 w-4.5 text-destructive shrink-0" />}
+                        {testResult.valid ? "Manifest Validated" : "Validation Issue Detected"}
+                      </p>
+                      {testResult.valid && (
+                        <span className="text-[10px] font-mono font-bold bg-emerald-900/60 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded">
+                          OKX.AI Standard v1.0.0
+                        </span>
+                      )}
+                    </div>
+
                     <p className="leading-relaxed font-medium">{testResult.message}</p>
+
+                    {testResult.valid && testResult.details && (
+                      <div className="grid grid-cols-3 gap-2 pt-2 border-t border-emerald-800/40 text-[10px] font-mono text-emerald-400">
+                        <div className="bg-emerald-950/60 p-1.5 rounded border border-emerald-500/20 text-center">
+                          <span className="block text-muted-foreground text-[9px]">Schema</span>
+                          <span>{testResult.details.schemaVersion}</span>
+                        </div>
+                        <div className="bg-emerald-950/60 p-1.5 rounded border border-emerald-500/20 text-center">
+                          <span className="block text-muted-foreground text-[9px]">Agents</span>
+                          <span>{testResult.details.agentCount} Verified</span>
+                        </div>
+                        <div className="bg-emerald-950/60 p-1.5 rounded border border-emerald-500/20 text-center">
+                          <span className="block text-muted-foreground text-[9px]">Pricing</span>
+                          <span>{testResult.details.pricingCount} Models</span>
+                        </div>
+                      </div>
+                    )}
+
                     {testResult.verified_at && (
-                      <p className="text-[10px] font-mono opacity-80 pt-1 border-t border-emerald-800/40">
-                        Verified at: {new Date(testResult.verified_at).toLocaleString()}
+                      <p className="text-[10px] font-mono opacity-80 pt-1 text-right">
+                        Timestamp: {new Date(testResult.verified_at).toLocaleString()}
                       </p>
                     )}
                   </div>

@@ -1,18 +1,18 @@
 import { createFileRoute, Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { useProjects, useProject } from "../hooks/useApi";
-import { 
-  Loader, 
-  Download, 
-  Plus, 
-  Sparkles, 
-  CheckCircle2, 
-  Copy, 
-  FileCode, 
-  Award, 
-  ChevronRight, 
-  Terminal, 
-  ShieldCheck, 
+import {
+  Loader,
+  Download,
+  Plus,
+  Sparkles,
+  CheckCircle2,
+  Copy,
+  FileCode,
+  Award,
+  ChevronRight,
+  Terminal,
+  ShieldCheck,
   Search,
   Rocket,
   AlertTriangle,
@@ -37,11 +37,9 @@ function Dashboard() {
   const navigate = useNavigate();
   const search = useSearch({ strict: false }) as { project_id?: string };
   const { data: projects = [], isLoading, error } = useProjects();
-  
+
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(search.project_id || null);
   const [copiedCode, setCopiedCode] = useState(false);
-  const [isManifestModalOpen, setIsManifestModalOpen] = useState(false);
-  const [copiedManifest, setCopiedManifest] = useState(false);
 
   // Auto select first project or search param project
   useEffect(() => {
@@ -68,45 +66,6 @@ function Dashboard() {
     navigator.clipboard.writeText(code);
     setCopiedCode(true);
     setTimeout(() => setCopiedCode(false), 2000);
-  };
-
-  const handleCopyManifest = (manifestObj: any) => {
-    navigator.clipboard.writeText(JSON.stringify(manifestObj, null, 2));
-    setCopiedManifest(true);
-    setTimeout(() => setCopiedManifest(false), 2000);
-  };
-
-  const aspManifestData = activeProject?.metrics_report?.asp_manifest || {
-    schema_version: "1.0.0",
-    provider: {
-      name: `BuilderForge - ${activeProject?.title || "Project"}`,
-      service_id: `asp.builderforge.${activeProject?.id || "demo"}`,
-      description: activeProject?.description || "",
-      url: `https://builderforge.okx.ai/projects/${activeProject?.id || "demo"}`,
-      version: "1.0.0",
-      author: "BuilderForge OKX Hackathon Crew",
-    },
-    agents: [
-      { id: "coordinator", name: "Coordinator Agent", role: "Pipeline Orchestrator", status: "ONLINE" },
-      { id: "researcher", name: "Researcher Agent", role: "DealFlow Intelligence", status: "ONLINE" },
-      { id: "creator", name: "Creator Agent", role: "LaunchPad Asset Synthesis", status: "ONLINE" },
-      { id: "executor", name: "Executor Agent", role: "OKX X Layer Deployment", status: "ONLINE" },
-      { id: "analyzer", name: "Analyzer Agent", role: "ASP Metrics & Readiness Scoring", status: "ONLINE" },
-    ],
-    pricing_models: [
-      { model_id: "pay_per_job", name: "Pay Per Execution", price: "0.05", currency: "OKT" },
-      { model_id: "subscription", name: "Builder Pro Monthly", price: "10.0", currency: "OKT" },
-    ],
-    service_slas: {
-      uptime_guarantee_pct: 99.9,
-      max_response_time_sec: 45,
-      supported_chains: ["OKX X Layer Testnet (Chain ID 195)", "OKX Mainnet"],
-    },
-    marketplace_listing: {
-      category: "Web3 Launchpad & Tokenomics ASP",
-      status: "VERIFIED_ASP_READY",
-      reputation_score: 98,
-    }
   };
 
   return (
@@ -170,7 +129,7 @@ function Dashboard() {
                   <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground px-1">
                     Your Projects ({projects.length})
                   </h3>
-                  
+
                   <div className="space-y-3">
                     {projects.map((proj) => {
                       const isSelected = proj.id === selectedProjectId;
@@ -386,7 +345,7 @@ contract BuilderForgeToken is ERC20 { ... }`}
                                 <h5 className="font-bold text-foreground uppercase tracking-wider text-[11px]">Score Breakdown</h5>
                                 <span className="font-black text-primary text-base">94/100</span>
                               </div>
-                              
+
                               <ul className="space-y-2">
                                 {(activeProject.metrics_report?.score_reasoning || [
                                   "Verified compilation of OpenZeppelin ERC-20 smart contract",
@@ -454,35 +413,7 @@ contract BuilderForgeToken is ERC20 { ... }`}
                         </div>
                       </div>
 
-                      {/* Bottom Action Footer Banner */}
-                      <div className="bg-gradient-to-r from-primary/10 via-purple-900/10 to-card border border-primary/30 rounded-xl p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-                        <div>
-                          <h4 className="font-bold text-foreground flex items-center gap-2">
-                            <ShieldCheck className="h-5 w-5 text-primary" /> Ready to List as ASP on OKX.AI?
-                          </h4>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            Your project includes a fully compliant OKX ASP Service Manifest JSON.
-                          </p>
-                        </div>
 
-                        <div className="flex items-center gap-3 shrink-0">
-                          <button
-                            onClick={() => setIsManifestModalOpen(true)}
-                            className="px-5 py-3 rounded-lg border border-primary/30 bg-primary/10 text-primary hover:bg-primary/20 text-xs font-bold transition flex items-center gap-2 cursor-pointer"
-                          >
-                            <Code className="h-4 w-4" />
-                            View Ready ASP Manifest
-                          </button>
-
-                          <Link
-                            to="/asp-listing"
-                            className="px-5 py-3 rounded-lg bg-primary text-primary-foreground text-xs font-bold hover:brightness-110 transition shadow-lg shadow-primary/20 flex items-center gap-2"
-                          >
-                            <Sparkles className="h-4 w-4" />
-                            List on OKX Directory
-                          </Link>
-                        </div>
-                      </div>
                     </div>
                   ) : (
                     <div className="text-center py-20 bg-card rounded-xl border border-border">
@@ -496,58 +427,7 @@ contract BuilderForgeToken is ERC20 { ... }`}
         </div>
       </main>
 
-      {/* ASP Manifest JSON Modal */}
-      {isManifestModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-200">
-          <div className="bg-card border border-border rounded-xl max-w-3xl w-full p-6 shadow-2xl space-y-4 overflow-hidden flex flex-col max-h-[90vh]">
-            <div className="flex items-center justify-between border-b border-border pb-4">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-lg bg-primary/20 flex items-center justify-center border border-primary/30 text-primary">
-                  <Code className="h-5 w-5" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-foreground">OKX.AI ASP Service Manifest</h3>
-                  <p className="text-xs text-muted-foreground">
-                    Compliant with OKX.AI Marketplace Standard v1.0.0
-                  </p>
-                </div>
-              </div>
 
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => handleCopyManifest(aspManifestData)}
-                  className="px-3 py-1.5 rounded-lg border border-border bg-secondary text-xs font-semibold text-foreground hover:bg-secondary/80 flex items-center gap-1.5 cursor-pointer"
-                >
-                  {copiedManifest ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
-                  {copiedManifest ? "Copied!" : "Copy JSON"}
-                </button>
-                <button
-                  onClick={() => setIsManifestModalOpen(false)}
-                  className="p-1.5 rounded-lg border border-border text-muted-foreground hover:text-foreground hover:bg-secondary cursor-pointer"
-                >
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
-            </div>
-
-            <pre className="bg-black/90 p-5 rounded-lg text-xs font-mono text-primary border border-primary/20 overflow-x-auto leading-relaxed flex-1 max-h-[550px]">
-              {JSON.stringify(aspManifestData, null, 2)}
-            </pre>
-
-            <div className="flex items-center justify-between pt-2 border-t border-border text-xs text-muted-foreground">
-              <span className="flex items-center gap-1.5 text-emerald-400 font-semibold">
-                <ShieldCheck className="h-4 w-4" /> VERIFIED_ASP_READY
-              </span>
-              <button
-                onClick={() => setIsManifestModalOpen(false)}
-                className="px-4 py-2 rounded-lg bg-primary text-primary-foreground font-semibold hover:brightness-110 cursor-pointer"
-              >
-                Close Inspector
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

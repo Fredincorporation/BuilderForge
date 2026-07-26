@@ -1,19 +1,19 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useDeals, useDiscoverDeals, useProjects } from "../hooks/useApi";
-import { 
-  Loader, 
-  Search, 
-  Sparkles, 
-  TrendingUp, 
-  CheckCircle2, 
-  ExternalLink, 
-  X, 
-  Award, 
-  DollarSign, 
-  Zap, 
-  Filter, 
-  Bookmark, 
+import {
+  Loader,
+  Search,
+  Sparkles,
+  TrendingUp,
+  CheckCircle2,
+  ExternalLink,
+  X,
+  Award,
+  DollarSign,
+  Zap,
+  Filter,
+  Bookmark,
   BookmarkCheck,
   ChevronRight,
   Target,
@@ -43,6 +43,49 @@ export function DealFlow() {
   const [discovering, setDiscovering] = useState(false);
   const [extraDeals, setExtraDeals] = useState<Deal[]>([]);
 
+  const isMounted = useRef(false);
+
+  // Restore tracked opportunities and discovered deals from localStorage on mount
+  useEffect(() => {
+    try {
+      const savedTracked = localStorage.getItem("builderforge_tracked_deal_ids");
+      if (savedTracked) {
+        const parsed = JSON.parse(savedTracked);
+        if (Array.isArray(parsed)) setTrackedDealIds(parsed);
+      }
+      const savedDiscovered = localStorage.getItem("builderforge_discovered_deals");
+      if (savedDiscovered) {
+        const parsed = JSON.parse(savedDiscovered);
+        if (Array.isArray(parsed)) setExtraDeals(parsed);
+      }
+    } catch (e) {
+      console.error("Failed to load dealflow state from localStorage", e);
+    }
+  }, []);
+
+  // Sync tracked opportunities to localStorage
+  useEffect(() => {
+    if (!isMounted.current) {
+      isMounted.current = true;
+      return;
+    }
+    try {
+      localStorage.setItem("builderforge_tracked_deal_ids", JSON.stringify(trackedDealIds));
+    } catch (e) {
+      console.error("Failed to save tracked deal IDs", e);
+    }
+  }, [trackedDealIds]);
+
+  // Sync discovered extra deals to localStorage
+  useEffect(() => {
+    if (!isMounted.current) return;
+    try {
+      localStorage.setItem("builderforge_discovered_deals", JSON.stringify(extraDeals));
+    } catch (e) {
+      console.error("Failed to save discovered deals", e);
+    }
+  }, [extraDeals]);
+
   // Merge deals from API and locally discovered deals
   const deals = [...extraDeals, ...rawDeals];
 
@@ -53,7 +96,7 @@ export function DealFlow() {
   const filteredDeals = deals.filter((deal) => {
     // Search query match
     const q = searchQuery.toLowerCase().trim();
-    const matchesSearch = !q || 
+    const matchesSearch = !q ||
       deal.title.toLowerCase().includes(q) ||
       deal.description.toLowerCase().includes(q) ||
       (deal.category && deal.category.toLowerCase().includes(q)) ||
@@ -216,8 +259,8 @@ export function DealFlow() {
                 const score = deal.match_score || 90;
 
                 return (
-                  <div 
-                    key={deal.id} 
+                  <div
+                    key={deal.id}
                     className="bg-card border border-border rounded-xl p-5 hover:border-primary/50 transition-all duration-200 shadow-lg flex flex-col justify-between space-y-4 relative group overflow-hidden"
                   >
                     {/* Top Row: Category & Status Badges */}
@@ -287,8 +330,8 @@ export function DealFlow() {
                         <button
                           onClick={() => toggleTrackDeal(deal.id, deal.title)}
                           className={`p-2 rounded-lg border text-xs transition cursor-pointer ${
-                            isTracked 
-                              ? "bg-emerald-950/60 border-emerald-500/40 text-emerald-400" 
+                            isTracked
+                              ? "bg-emerald-950/60 border-emerald-500/40 text-emerald-400"
                               : "bg-secondary/80 border-border text-muted-foreground hover:text-foreground hover:bg-secondary"
                           }`}
                           title={isTracked ? "Tracked Opportunity" : "Track Opportunity"}
