@@ -64,9 +64,15 @@ export interface Deal {
   id: string;
   title: string;
   description: string;
-  status: "active" | "closed";
+  status: "active" | "upcoming" | "closed";
   funding_stage: string;
+  category?: string;
+  match_score?: number;
   tags: string[];
+  why_it_matches?: string;
+  recommended_action?: string;
+  apply_url?: string;
+  project_id?: string;
 }
 
 export interface Launch {
@@ -232,6 +238,12 @@ export const dealflowApi = {
     apiCall<{ deal: Deal }>(`/dealflow/${id}`, {
       method: "GET",
     }),
+
+  discover: (query?: string) =>
+    apiCall<{ status: string; discovered_count: number; deals: Deal[] }>("/dealflow/discover", {
+      method: "POST",
+      body: JSON.stringify({ query }),
+    }),
 };
 
 /**
@@ -250,6 +262,12 @@ export const launchpadApi = {
     apiCall<{ launch: Launch }>(`/launchpad/${id}`, {
       method: "GET",
     }),
+
+  simulate: (payload: { project_id?: string; title?: string; token_symbol?: string; wallet_address?: string }) =>
+    apiCall<{ status: string; simulation: any }>("/launchpad/simulate", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
 };
 
 export const aspApi = {
@@ -267,6 +285,12 @@ export const aspApi = {
   getPricing: () =>
     apiCall<{ status: string; pricing_models: any[] }>("/asp/pricing", {
       method: "GET",
+    }),
+
+  submit: (manifest: any) =>
+    apiCall<{ status: string; submission_id: string; message: string; marketplace_url: string }>("/asp/submit", {
+      method: "POST",
+      body: JSON.stringify({ manifest }),
     }),
 };
 

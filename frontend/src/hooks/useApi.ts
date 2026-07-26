@@ -158,6 +158,17 @@ export const useDeals = (statusFilter?: string) => {
   return useQuery({
     queryKey: ["deals", statusFilter],
     queryFn: () => dealflowApi.list(statusFilter).then(res => res.deals || []),
+    staleTime: 5 * 1000,
+  });
+};
+
+export const useDiscoverDeals = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (query?: string) => dealflowApi.discover(query).then(res => res.deals),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["deals"] });
+    },
   });
 };
 
@@ -165,5 +176,19 @@ export const useLaunches = (statusFilter?: string) => {
   return useQuery({
     queryKey: ["launches", statusFilter],
     queryFn: () => launchpadApi.list(statusFilter).then(res => res.launches || []),
+  });
+};
+
+export const useSimulateContractDeployment = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: { project_id?: string; title?: string; token_symbol?: string; wallet_address?: string }) =>
+      launchpadApi.simulate(payload).then(res => res.simulation),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
+      if (variables.project_id) {
+        queryClient.invalidateQueries({ queryKey: ["project", variables.project_id] });
+      }
+    },
   });
 };

@@ -13,6 +13,18 @@ export const Route = createFileRoute("/new-project")({
   ),
 });
 
+const CATEGORIES = [
+  "General Web3",
+  "DeAI & AI Agents",
+  "DeFi Protocol",
+  "Token Launch",
+  "Security & Auditing",
+  "Infrastructure & Tooling",
+  "DAO Governance",
+  "NFT Collection",
+  "Creator Economy",
+];
+
 function NewProject() {
   const navigate = useNavigate();
   const createProject = useCreateProject();
@@ -24,7 +36,7 @@ function NewProject() {
   const [formData, setFormData] = useState({
     title: "",
     description: "",
-    category: "General",
+    category: "DeAI & AI Agents",
   });
 
   // Query project status & logs when pipeline is running
@@ -65,7 +77,7 @@ function NewProject() {
   const handleFillDemo = () => {
     const demoTitle = "DeAI Compute DAO";
     const demoDesc = "Decentralized AI compute marketplace on OKX X Layer connecting idle GPU providers with AI developers using autonomous agent job matching.";
-    const demoCat = "DeAI Infrastructure";
+    const demoCat = "DeAI & AI Agents";
     
     setFormData({
       title: demoTitle,
@@ -91,27 +103,14 @@ function NewProject() {
         <div className="px-6 py-8">
           <div className="max-w-2xl mx-auto space-y-6">
             {/* Header */}
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-4xl font-bold text-foreground flex items-center gap-3">
-                  <Rocket className="h-8 w-8 text-primary" />
-                  Create New Project
-                </h1>
-                <p className="text-muted-foreground mt-2">
-                  Launch an autonomous Web3 project with BuilderForge multi-agent crew
-                </p>
-              </div>
-
-              {/* Fast Demo Run Button */}
-              <button
-                type="button"
-                onClick={handleFillDemo}
-                disabled={createProject.isPending}
-                className="px-4 py-2.5 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-semibold text-xs flex items-center gap-2 shadow-lg hover:shadow-purple-500/25 transition-all cursor-pointer"
-              >
-                <Zap className="h-4 w-4 fill-amber-300 text-amber-300" />
-                Run Demo Project (1-Click)
-              </button>
+            <div>
+              <h1 className="text-4xl font-bold text-foreground flex items-center gap-3">
+                <Rocket className="h-8 w-8 text-primary" />
+                Create New Project
+              </h1>
+              <p className="text-muted-foreground mt-2">
+                Launch an autonomous Web3 project with BuilderForge multi-agent crew
+              </p>
             </div>
 
             {/* Form */}
@@ -162,35 +161,48 @@ function NewProject() {
                   onChange={handleChange}
                   className="w-full rounded-lg border border-input bg-background px-4 py-2.5 text-foreground focus:border-primary focus:outline-none"
                 >
-                  <option value="General">General Web3</option>
-                  <option value="DeAI Infrastructure">DeAI & AI Agents</option>
-                  <option value="DeFi Protocol">DeFi Protocol</option>
-                  <option value="Token Launch">Token Launch</option>
-                  <option value="NFT Collection">NFT Collection</option>
-                  <option value="DAO Governance">DAO Governance</option>
+                  {CATEGORIES.map((cat) => (
+                    <option key={cat} value={cat}>
+                      {cat}
+                    </option>
+                  ))}
                 </select>
               </div>
 
-              {/* Actions */}
-              <div className="flex gap-4 pt-4">
-                <button
-                  type="submit"
-                  disabled={createProject.isPending || runPipeline.isPending}
-                  className="flex-1 rounded-lg bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground disabled:opacity-50 disabled:cursor-not-allowed hover:brightness-110 transition flex items-center justify-center gap-2 shadow-lg shadow-primary/20"
-                >
-                  {(createProject.isPending || runPipeline.isPending) ? (
-                    <Loader className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Sparkles className="h-4 w-4" />
-                  )}
-                  {createProject.isPending ? "Creating..." : "Launch Multi-Agent Pipeline"}
-                </button>
+              {/* Primary Actions */}
+              <div className="space-y-3 pt-4 border-t border-border/60">
+                <div className="flex gap-4">
+                  <button
+                    type="submit"
+                    disabled={createProject.isPending || runPipeline.isPending}
+                    className="flex-1 rounded-lg bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground disabled:opacity-50 disabled:cursor-not-allowed hover:brightness-110 transition flex items-center justify-center gap-2 shadow-lg shadow-primary/20 cursor-pointer"
+                  >
+                    {(createProject.isPending || runPipeline.isPending) ? (
+                      <Loader className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Sparkles className="h-4 w-4" />
+                    )}
+                    {createProject.isPending ? "Creating..." : "Launch Multi-Agent Pipeline"}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => navigate({ to: "/dashboard" })}
+                    className="w-32 rounded-lg border border-border bg-background px-4 py-3 text-sm font-semibold text-foreground hover:bg-secondary transition cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                </div>
+
+                {/* 1-Click Demo Run Button placed directly under Launch Multi-Agent Pipeline */}
                 <button
                   type="button"
-                  onClick={() => navigate({ to: "/dashboard" })}
-                  className="flex-1 rounded-lg border border-border bg-background px-6 py-3 text-sm font-semibold text-foreground hover:bg-secondary transition"
+                  onClick={handleFillDemo}
+                  disabled={createProject.isPending || runPipeline.isPending}
+                  className="w-full rounded-lg bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-700 hover:from-purple-500 hover:to-indigo-500 text-white px-6 py-3 text-sm font-bold flex items-center justify-center gap-2.5 shadow-lg shadow-purple-500/20 transition-all cursor-pointer ring-1 ring-purple-400/30"
                 >
-                  Cancel
+                  <Zap className="h-4 w-4 fill-amber-300 text-amber-300 shrink-0" />
+                  <span>Run Demo Project (1-Click)</span>
                 </button>
               </div>
             </form>
