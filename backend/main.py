@@ -45,6 +45,32 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Startup and shutdown lifecycle handler."""
+    # Detect and remove a seeded runtime DB (only if it contains known demo IDs)
+    try:
+        import sqlite3
+        db_file = os.path.join(ROOT_DIR, "data", "builderforge.db")
+        seeded_ids = {"f97b8957", "08e3177f", "de51c18b"}
+        if os.path.exists(db_file):
+            try:
+                conn = sqlite3.connect(db_file)
+                cur = conn.cursor()
+                cur.execute("SELECT id FROM projects LIMIT 10")
+                rows = cur.fetchall()
+                conn.close()
+                present = {r[0] for r in rows if r and r[0]}
+                # If any known seeded id is present, remove the DB to start clean
+                if seeded_ids & present:
+                    logger.warning("Seeded demo projects detected in runtime DB — removing local DB to start clean.")
+                    try:
+                        os.remove(db_file)
+                    except Exception as e:
+                        logger.error(f"Failed to remove seeded DB file: {e}")
+            except Exception as e:
+                logger.warning(f"Unable to inspect runtime DB: {e}")
+    except Exception:
+        # Non-fatal: continue startup even if DB cleanup check fails
+        pass
+
     logger.info("=" * 60)
     logger.info("🚀 BuilderForge OKX ASP Backend Initializing...")
     logger.info(f"⚡ Mode: {'SIMULATED (No API keys required)' if settings.SIMULATION_MODE else 'LIVE'}")
