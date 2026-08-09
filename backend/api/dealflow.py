@@ -219,9 +219,9 @@ async def discover_deals(request: Optional[dict] = None) -> dict:
     """
     try:
         import random
-        from agents.researcher import ResearcherAgent
+        from agents.researcher import create_researcher_agent
 
-        researcher = ResearcherAgent(mode="SIMULATED")
+        researcher = create_researcher_agent()
         query_topic = (request.get("query") if request else None) or "OKX Ecosystem AI & Web3 Grants"
         res = researcher.run(query_topic, "Market discovery run", "Web3")
 

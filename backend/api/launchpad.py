@@ -12,6 +12,8 @@ from fastapi import APIRouter, HTTPException, status
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
+from utils.db import db_get_all_projects
+
 # Mock launchpad data
 MOCK_LAUNCHES = [
     {
@@ -44,6 +46,29 @@ MOCK_LAUNCHES = [
 ]
 
 
+def _build_launches_from_projects() -> list[dict]:
+    launches: list[dict] = []
+    try:
+        projects = db_get_all_projects()
+        for project in projects:
+            deployment = project.get("deployment_plan") or {}
+            if deployment.get("deployment_status") != "CONFIRMED":
+                continue
+            launches.append({
+                "id": f"launch_{project['id']}",
+                "title": project.get("title", "BuilderForge Launch"),
+                "description": project.get("description", "Deployed project on OKX X Layer."),
+                "launch_date": deployment.get("timestamp", project.get("created_at", "2026-01-01"))[:10],
+                "status": "live" if deployment.get("deployment_status") == "CONFIRMED" else "upcoming",
+                "category": project.get("category", "Web3"),
+                "tags": ["ASP", "OKX", "X Layer"],
+            })
+    except Exception as e:
+        logger.warning(f"Unable to build launches from saved projects: {e}")
+
+    return launches
+
+
 # ============================================================================
 # Endpoints
 # ============================================================================
@@ -58,11 +83,20 @@ async def list_launches(status_filter: str = "upcoming") -> dict:
     Returns: Array of launch objects
     """
     try:
-        if status_filter == "all":
-            launches = MOCK_LAUNCHES
-        else:
-            launches = [l for l in MOCK_LAUNCHES if l["status"] == status_filter]
-        
+        project_launches = _build_launches_from_projects()
+        all_launches = project_launches + MOCK_LAUNCHES
+
+        if status_filter != "all":
+            all_launches = [l for l in all_launches if l["status"] == status_filter]
+
+        # Deduplicate by launch id, favoring project-based launches.
+        seen = set()
+        launches = []
+        for launch in all_launches:
+            if launch["id"] not in seen:
+                seen.add(launch["id"])
+                launches.append(launch)
+
         return {
             "status": "success",
             "count": len(launches),
@@ -88,7 +122,9 @@ async def get_launch(launch_id: str) -> dict:
     Returns: Launch object
     """
     try:
-        launch = next((l for l in MOCK_LAUNCHES if l["id"] == launch_id), None)
+        project_launches = _build_launches_from_projects()
+        all_launches = project_launches + MOCK_LAUNCHES
+        launch = next((l for l in all_launches if l["id"] == launch_id), None)
         
         if not launch:
             raise HTTPException(

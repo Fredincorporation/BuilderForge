@@ -15,7 +15,17 @@ function getApiBaseUrl(): string {
       return process.env.REACT_APP_API_URL;
     }
   } catch {}
-  return "http://localhost:8000/api";
+
+  // Default to live Render backend for deployed frontend if no env variable is configured.
+  const defaultRemoteApi = "https://builderforge.onrender.com/api";
+
+  if (typeof window !== "undefined") {
+    const origin = window.location.origin;
+    const isLocalhost = /localhost|127\.0\.0\.1/.test(origin);
+    return isLocalhost ? "http://localhost:8000/api" : defaultRemoteApi;
+  }
+
+  return defaultRemoteApi;
 }
 
 export const API_BASE_URL = getApiBaseUrl();

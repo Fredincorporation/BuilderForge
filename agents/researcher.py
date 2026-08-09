@@ -49,3 +49,9 @@ def create_researcher_agent() -> Agent:
         max_iter=15,
         max_rpm=10,
     )
+
+
+# Alias for compatibility with imports that expect ResearcherAgent.
+ResearcherAgent = create_researcher_agent
+
+__all__ = ["create_researcher_agent", "ResearcherAgent", "get_llm"]
