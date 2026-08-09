@@ -7,25 +7,25 @@
 function getApiBaseUrl(): string {
   try {
     if (typeof import.meta !== "undefined" && import.meta.env?.VITE_API_URL) {
-      return import.meta.env.VITE_API_URL;
+      return import.meta.env.VITE_API_URL as string;
     }
   } catch {}
   try {
     if (typeof process !== "undefined" && process.env?.REACT_APP_API_URL) {
-      return process.env.REACT_APP_API_URL;
+      return process.env.REACT_APP_API_URL as string;
     }
   } catch {}
 
-  // Default to live Render backend for deployed frontend if no env variable is configured.
-  const defaultRemoteApi = "https://builderforge.onrender.com/api";
+  // Default to live Render backend origin for deployed frontend if no env variable is configured.
+  const defaultRemoteOrigin = "https://builderforge.onrender.com";
 
   if (typeof window !== "undefined") {
     const origin = window.location.origin;
     const isLocalhost = /localhost|127\.0\.0\.1/.test(origin);
-    return isLocalhost ? "http://localhost:8000/api" : defaultRemoteApi;
+    return isLocalhost ? "http://localhost:8000" : defaultRemoteOrigin;
   }
 
-  return defaultRemoteApi;
+  return defaultRemoteOrigin;
 }
 
 export const API_BASE_URL = getApiBaseUrl();
@@ -102,7 +102,10 @@ async function apiCall<T = unknown>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<T> {
-  const url = `${API_BASE_URL}${endpoint}`;
+  // Ensure we always call the backend under the /api prefix regardless of how API_BASE_URL was set.
+  const base = API_BASE_URL.replace(/\/$/, "");
+  const ep = endpoint.startsWith("/api") ? endpoint : `/api${endpoint}`;
+  const url = `${base}${ep}`;
   const headers: HeadersInit = {
     "Content-Type": "application/json",
     ...options.headers,
